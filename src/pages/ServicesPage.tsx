@@ -4,26 +4,41 @@ import { ServiceFormDialog } from '@/components/ServiceFormDialog';
 import { Button } from '@/components/ui/button';
 import { useServices } from '@/hooks/useServices';
 import { exportServicesToExcel } from '@/lib/export';
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Service } from '@/types';
 
 export default function ServicesPage() {
-  const { services, addService, updateStatus, deleteService } = useServices();
+  const { services, loading, addService, updateStatus, deleteService } = useServices();
 
-  const handleAddService = (data: Parameters<typeof addService>[0]) => {
-    addService(data);
-    toast.success('Serviço cadastrado com sucesso!');
+  const handleAddService = async (data: Omit<Service, 'id' | 'createdAt'>) => {
+    const result = await addService(data);
+    if (result) {
+      toast.success('Serviço cadastrado com sucesso!');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteService(id);
+  const handleDelete = async (id: string) => {
+    await deleteService(id);
     toast.success('Serviço excluído com sucesso!');
   };
 
   const handleExport = () => {
-    exportServicesToExcel(services);
+    const exportData = services.map(s => ({
+      ...s,
+      status: s.status,
+    }));
+    exportServicesToExcel(exportData as Service[]);
     toast.success('Arquivo exportado com sucesso!');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -42,7 +57,7 @@ export default function ServicesPage() {
       />
 
       <ServicesTable
-        services={services}
+        services={services as Service[]}
         onUpdateStatus={updateStatus}
         onDelete={handleDelete}
       />

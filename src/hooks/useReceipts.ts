@@ -1,37 +1,146 @@
-import { useState } from 'react';
-import { Receipt } from '@/types';
-import { mockReceipts } from '@/lib/data';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+
+interface Receipt {
+  id: string;
+  serviceId: string | null;
+  date: string;
+  expectedValue: number;
+  receivedValue: number;
+  difference: number;
+  notes: string;
+  workingCapital: number;
+  createdAt: string;
+}
+
+interface DbReceipt {
+  id: string;
+  service_id: string | null;
+  date: string;
+  expected_value: number;
+  received_value: number;
+  difference: number;
+  notes: string | null;
+  working_capital: number;
+  created_at: string;
+}
+
+const mapDbToReceipt = (db: DbReceipt): Receipt => ({
+  id: db.id,
+  serviceId: db.service_id,
+  date: db.date,
+  expectedValue: Number(db.expected_value),
+  receivedValue: Number(db.received_value),
+  difference: Number(db.difference),
+  notes: db.notes || '',
+  workingCapital: Number(db.working_capital),
+  createdAt: db.created_at,
+});
 
 export function useReceipts() {
-  const [receipts, setReceipts] = useState<Receipt[]>(mockReceipts);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const addReceipt = (receipt: Omit<Receipt, 'id' | 'createdAt' | 'difference'>) => {
-    const newReceipt: Receipt = {
-      ...receipt,
-      id: Date.now().toString(),
-      difference: receipt.receivedValue - receipt.expectedValue,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setReceipts((prev) => [...prev, newReceipt]);
+  const fetchReceipts = useCallback(async () => {
+    if (!user) {
+      setReceipts([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('receipts')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching receipts:', error);
+      toast.error('Erro ao carregar recebimentos');
+    } else {
+      setReceipts((data || []).map(mapDbToReceipt));
+    }
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    fetchReceipts();
+  }, [fetchReceipts]);
+
+  const addReceipt = async (receipt: {
+    serviceId: string;
+    date: string;
+    expectedValue: number;
+    receivedValue: number;
+    notes: string;
+    workingCapital: number;
+  }) => {
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from('receipts')
+      .insert({
+        user_id: user.id,
+        service_id: receipt.serviceId,
+        date: receipt.date,
+        expected_value: receipt.expectedValue,
+        received_value: receipt.receivedValue,
+        notes: receipt.notes,
+        working_capital: receipt.workingCapital,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding receipt:', error);
+      toast.error('Erro ao registrar recebimento');
+      return null;
+    }
+
+    const newReceipt = mapDbToReceipt(data);
+    setReceipts((prev) => [newReceipt, ...prev]);
     return newReceipt;
   };
 
-  const updateReceipt = (id: string, updates: Partial<Receipt>) => {
-    setReceipts((prev) =>
-      prev.map((receipt) => {
-        if (receipt.id === id) {
-          const updated = { ...receipt, ...updates };
-          if (updates.receivedValue !== undefined || updates.expectedValue !== undefined) {
-            updated.difference = updated.receivedValue - updated.expectedValue;
-          }
-          return updated;
-        }
-        return receipt;
-      })
-    );
+  const updateReceipt = async (id: string, updates: Partial<Receipt>) => {
+    const dbUpdates: Record<string, unknown> = {};
+    if (updates.serviceId !== undefined) dbUpdates.service_id = updates.serviceId;
+    if (updates.date !== undefined) dbUpdates.date = updates.date;
+    if (updates.expectedValue !== undefined) dbUpdates.expected_value = updates.expectedValue;
+    if (updates.receivedValue !== undefined) dbUpdates.received_value = updates.receivedValue;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.workingCapital !== undefined) dbUpdates.working_capital = updates.workingCapital;
+
+    const { error } = await supabase
+      .from('receipts')
+      .update(dbUpdates)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating receipt:', error);
+      toast.error('Erro ao atualizar recebimento');
+      return;
+    }
+
+    // Refetch to get computed difference
+    await fetchReceipts();
   };
 
-  const deleteReceipt = (id: string) => {
+  const deleteReceipt = async (id: string) => {
+    const { error } = await supabase
+      .from('receipts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting receipt:', error);
+      toast.error('Erro ao excluir recebimento');
+      return;
+    }
+
     setReceipts((prev) => prev.filter((receipt) => receipt.id !== id));
   };
 
@@ -53,11 +162,13 @@ export function useReceipts() {
 
   return {
     receipts,
+    loading,
     addReceipt,
     updateReceipt,
     deleteReceipt,
     getReceiptsByServiceId,
     getTotalReceived,
     getLatestWorkingCapital,
+    refetch: fetchReceipts,
   };
 }

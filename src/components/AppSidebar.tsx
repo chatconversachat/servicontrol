@@ -3,10 +3,10 @@ import {
   FileText,
   Receipt,
   BarChart3,
-  Download,
-  Menu,
+  LogOut,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
+import { useNavigate } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -17,10 +17,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
-  SidebarTrigger,
+  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
@@ -32,6 +34,18 @@ const menuItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error('Erro ao sair');
+    } else {
+      toast.success('Até logo!');
+      navigate('/auth');
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -75,6 +89,22 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-4">
+        {!collapsed && user && (
+          <div className="mb-2 px-2">
+            <p className="text-xs text-sidebar-foreground/50 truncate">{user.email}</p>
+          </div>
+        )}
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-5 w-5" />
+          {!collapsed && <span>Sair</span>}
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   );
 }
