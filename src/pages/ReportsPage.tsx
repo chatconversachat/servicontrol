@@ -3,16 +3,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useServices } from '@/hooks/useServices';
 import { useReceipts } from '@/hooks/useReceipts';
-import { formatCurrency, calculateMonthlySummary, getStatusLabel } from '@/lib/data';
+import { formatCurrency, getStatusLabel } from '@/lib/data';
 import { exportAllToExcel } from '@/lib/export';
-import { Download, FileText, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Download, FileText, TrendingUp, TrendingDown, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Service, Receipt } from '@/types';
 
 export default function ReportsPage() {
-  const { services } = useServices();
-  const { receipts, getLatestWorkingCapital } = useReceipts();
+  const { services, loading: servicesLoading } = useServices();
+  const { receipts, loading: receiptsLoading, getLatestWorkingCapital, getTotalReceived } = useReceipts();
 
-  const summary = calculateMonthlySummary(services, receipts);
+  if (servicesLoading || receiptsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const totalReceived = getTotalReceived();
+  const totalValue = services.reduce((sum, s) => sum + s.value, 0);
+  const totalPending = totalValue - totalReceived;
+  const averagePerService = services.length > 0 ? totalValue / services.length : 0;
   const workingCapital = getLatestWorkingCapital();
 
   const servicesByStatus = services.reduce((acc, service) => {
@@ -21,9 +33,19 @@ export default function ReportsPage() {
   }, {} as Record<string, number>);
 
   const handleExportAll = () => {
-    exportAllToExcel(services, receipts);
+    const servicesExport = services.map(s => ({
+      ...s,
+      status: s.status,
+    })) as Service[];
+    const receiptsExport = receipts.map(r => ({
+      ...r,
+      serviceId: r.serviceId || '',
+    })) as Receipt[];
+    exportAllToExcel(servicesExport, receiptsExport);
     toast.success('Relatório completo exportado com sucesso!');
   };
+
+  const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
     <div className="space-y-6">
@@ -46,25 +68,21 @@ export default function ReportsPage() {
             </div>
             <div>
               <CardTitle>Resumo do Mês</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {summary.month} {summary.year}
-              </p>
+              <p className="text-sm text-muted-foreground capitalize">{currentMonth}</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">Total de Serviços</span>
-              <span className="font-bold text-lg">{summary.totalServices}</span>
+              <span className="font-bold text-lg">{services.length}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">Valor Total</span>
-              <span className="font-bold text-lg">
-                {formatCurrency(summary.totalReceived + summary.totalPending)}
-              </span>
+              <span className="font-bold text-lg">{formatCurrency(totalValue)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <span className="text-muted-foreground">Média por Serviço</span>
-              <span className="font-bold text-lg">{formatCurrency(summary.averagePerService)}</span>
+              <span className="font-bold text-lg">{formatCurrency(averagePerService)}</span>
             </div>
           </CardContent>
         </Card>
@@ -86,7 +104,7 @@ export default function ReportsPage() {
                 <span className="text-muted-foreground">Total Recebido</span>
               </div>
               <span className="font-bold text-lg text-success">
-                {formatCurrency(summary.totalReceived)}
+                {formatCurrency(totalReceived)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
@@ -95,7 +113,7 @@ export default function ReportsPage() {
                 <span className="text-muted-foreground">A Receber</span>
               </div>
               <span className="font-bold text-lg text-warning">
-                {formatCurrency(summary.totalPending)}
+                {formatCurrency(totalPending)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
@@ -106,24 +124,26 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      <Card className="animate-fade-in">
-        <CardHeader>
-          <CardTitle>Serviços por Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(servicesByStatus).map(([status, count]) => (
-              <div
-                key={status}
-                className="rounded-lg border p-4 text-center transition-colors hover:bg-muted/50"
-              >
-                <p className="text-2xl font-bold">{count}</p>
-                <p className="text-sm text-muted-foreground">{getStatusLabel(status)}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {Object.keys(servicesByStatus).length > 0 && (
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <CardTitle>Serviços por Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {Object.entries(servicesByStatus).map(([status, count]) => (
+                <div
+                  key={status}
+                  className="rounded-lg border p-4 text-center transition-colors hover:bg-muted/50"
+                >
+                  <p className="text-2xl font-bold">{count}</p>
+                  <p className="text-sm text-muted-foreground">{getStatusLabel(status)}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

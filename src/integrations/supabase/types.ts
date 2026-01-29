@@ -14,7 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      receipts: {
+        Row: {
+          created_at: string
+          date: string
+          difference: number | null
+          expected_value: number
+          id: string
+          notes: string | null
+          received_value: number
+          service_id: string | null
+          user_id: string
+          working_capital: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          difference?: number | null
+          expected_value?: number
+          id?: string
+          notes?: string | null
+          received_value?: number
+          service_id?: string | null
+          user_id: string
+          working_capital?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          difference?: number | null
+          expected_value?: number
+          id?: string
+          notes?: string | null
+          received_value?: number
+          service_id?: string | null
+          user_id?: string
+          working_capital?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipts_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          client: string
+          code: string
+          created_at: string
+          daily_rate: number
+          days_worked: number
+          description: string
+          expected_date: string
+          id: string
+          period: string
+          status: Database["public"]["Enums"]["service_status"]
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          client: string
+          code: string
+          created_at?: string
+          daily_rate?: number
+          days_worked?: number
+          description: string
+          expected_date: string
+          id?: string
+          period: string
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+          user_id: string
+          value?: number
+        }
+        Update: {
+          client?: string
+          code?: string
+          created_at?: string
+          daily_rate?: number
+          days_worked?: number
+          description?: string
+          expected_date?: string
+          id?: string
+          period?: string
+          status?: Database["public"]["Enums"]["service_status"]
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +117,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      service_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "paid"
+        | "overdue"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +249,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      service_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "paid",
+        "overdue",
+      ],
+    },
   },
 } as const
