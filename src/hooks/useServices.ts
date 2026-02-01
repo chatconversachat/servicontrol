@@ -162,6 +162,62 @@ export function useServices() {
     return services.find((service) => service.id === id);
   };
 
+  // Cálculos automáticos
+  const getTotalValue = () => {
+    return services.reduce((sum, service) => sum + service.value, 0);
+  };
+
+  const getTotalByStatus = (status: ServiceStatus) => {
+    return services
+      .filter((service) => service.status === status)
+      .reduce((sum, service) => sum + service.value, 0);
+  };
+
+  const getTotalPending = () => {
+    // Serviços pendentes (não pagos ainda)
+    return services
+      .filter((service) => service.status !== 'paid')
+      .reduce((sum, service) => sum + service.value, 0);
+  };
+
+  const getTotalInProgress = () => {
+    return getTotalByStatus('in_progress');
+  };
+
+  const getTotalCompleted = () => {
+    return getTotalByStatus('completed');
+  };
+
+  const getTotalPaid = () => {
+    return getTotalByStatus('paid');
+  };
+
+  const getTotalOverdue = () => {
+    return getTotalByStatus('overdue');
+  };
+
+  const getCountByStatus = (status: ServiceStatus) => {
+    return services.filter((service) => service.status === status).length;
+  };
+
+  const getServicesSummary = () => {
+    return {
+      total: services.length,
+      totalValue: getTotalValue(),
+      pending: getCountByStatus('pending'),
+      pendingValue: getTotalByStatus('pending'),
+      inProgress: getCountByStatus('in_progress'),
+      inProgressValue: getTotalInProgress(),
+      completed: getCountByStatus('completed'),
+      completedValue: getTotalCompleted(),
+      paid: getCountByStatus('paid'),
+      paidValue: getTotalPaid(),
+      overdue: getCountByStatus('overdue'),
+      overdueValue: getTotalOverdue(),
+      toReceive: getTotalPending(),
+    };
+  };
+
   return {
     services,
     loading,
@@ -171,5 +227,15 @@ export function useServices() {
     deleteService,
     getServiceById,
     refetch: fetchServices,
+    // Cálculos automáticos
+    getTotalValue,
+    getTotalByStatus,
+    getTotalPending,
+    getTotalInProgress,
+    getTotalCompleted,
+    getTotalPaid,
+    getTotalOverdue,
+    getCountByStatus,
+    getServicesSummary,
   };
 }
