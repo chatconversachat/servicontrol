@@ -8,6 +8,7 @@ import { exportReceiptsToExcel } from '@/lib/export';
 import { Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Service, Receipt } from '@/types';
+import { SmartFilters } from '@/components/SmartFilters';
 
 export default function ReceiptsPage() {
   const { services, loading: servicesLoading } = useServices();
@@ -72,6 +73,8 @@ export default function ReceiptsPage() {
           </>
         }
       />
+
+      <SmartFilters />
 
       <ReceiptsTable
         receipts={receipts as Receipt[]}

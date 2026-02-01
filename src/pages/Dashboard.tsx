@@ -5,6 +5,7 @@ import { useServices } from '@/hooks/useServices';
 import { useReceipts } from '@/hooks/useReceipts';
 import { formatCurrency } from '@/lib/data';
 import { Briefcase, TrendingUp, Clock, DollarSign, Loader2, PlayCircle, CheckCircle } from 'lucide-react';
+import { SmartFilters } from '@/components/SmartFilters';
 
 export default function Dashboard() {
   const { services, loading: servicesLoading, getServicesSummary } = useServices();
@@ -25,7 +26,7 @@ export default function Dashboard() {
 
   // Build monthly chart data from real data
   const monthlyData = [
-    { name: 'Este mês', received: receiptsSummary.totalReceived, pending: toReceive > 0 ? toReceive : 0 },
+    { name: 'Este período', received: receiptsSummary.totalReceived, pending: toReceive > 0 ? toReceive : 0 },
   ];
 
   // Build client distribution from real services
@@ -41,10 +42,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Visão geral dos seus serviços e recebimentos"
-      />
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <PageHeader
+          title="Dashboard"
+          description="Visão geral dos seus serviços e recebimentos"
+        />
+      </div>
+
+      <SmartFilters />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard

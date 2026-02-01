@@ -28,13 +28,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
-import { Service, ServiceStatus } from '@/types';
+import { Service } from '@/types';
 
 const serviceSchema = z.object({
   code: z.string().min(1, 'Código é obrigatório').max(20),
   client: z.string().min(1, 'Cliente é obrigatório').max(100),
-  description: z.string().min(1, 'Descrição é obrigatória').max(500),
+  address: z.string().max(200).optional(),
+  description: z.string().max(500),
   value: z.coerce.number().min(0, 'Valor deve ser positivo'),
+  costs: z.coerce.number().min(0, 'Custo deve ser positivo').default(0),
   status: z.enum(['pending', 'in_progress', 'completed', 'paid', 'overdue']),
   expectedDate: z.string().min(1, 'Data é obrigatória'),
   daysWorked: z.coerce.number().min(0).default(0),
@@ -57,13 +59,15 @@ export function ServiceFormDialog({ onSubmit, trigger }: ServiceFormDialogProps)
     defaultValues: {
       code: '',
       client: '',
+      address: '',
       description: '',
       value: 0,
+      costs: 0,
       status: 'pending',
       expectedDate: '',
       daysWorked: 0,
       dailyRate: 0,
-      period: '',
+      period: new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
     },
   });
 
@@ -134,12 +138,26 @@ export function ServiceFormDialog({ onSubmit, trigger }: ServiceFormDialogProps)
 
             <FormField
               control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Endereço da Obra</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Rua, Número, Bairro - Cidade" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Descrição do Serviço</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Descreva o serviço..." {...field} />
+                    <Textarea placeholder="Descreva o serviço e liste custos aqui..." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,12 +180,12 @@ export function ServiceFormDialog({ onSubmit, trigger }: ServiceFormDialogProps)
               />
               <FormField
                 control={form.control}
-                name="expectedDate"
+                name="costs"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Data Prevista</FormLabel>
+                    <FormLabel>Custos (R$)</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="number" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -176,6 +194,46 @@ export function ServiceFormDialog({ onSubmit, trigger }: ServiceFormDialogProps)
             </div>
 
             <div className="grid grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="expectedDate"
+                render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel>Data Prevista</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pending">Pendente</SelectItem>
+                        <SelectItem value="in_progress">Em Andamento</SelectItem>
+                        <SelectItem value="completed">Concluído</SelectItem>
+                        <SelectItem value="paid">Pago</SelectItem>
+                        <SelectItem value="overdue">Atrasado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
               <FormField
                 control={form.control}
                 name="daysWorked"
@@ -198,30 +256,6 @@ export function ServiceFormDialog({ onSubmit, trigger }: ServiceFormDialogProps)
                     <FormControl>
                       <Input type="number" step="0.01" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pending">Pendente</SelectItem>
-                        <SelectItem value="in_progress">Em Andamento</SelectItem>
-                        <SelectItem value="completed">Concluído</SelectItem>
-                        <SelectItem value="paid">Pago</SelectItem>
-                        <SelectItem value="overdue">Atrasado</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

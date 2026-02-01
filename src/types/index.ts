@@ -6,12 +6,20 @@ export interface Service {
   client: string;
   description: string;
   value: number;
+  costs: number;
   status: ServiceStatus;
   expectedDate: string;
   daysWorked: number;
   dailyRate: number;
   period: string;
   createdAt: string;
+  address?: string;
+  contractorName?: string;
+  contractorValue?: number;
+  contractorPayments?: { date: string; value: number; type: string }[];
+  expenses?: { date: string; value: number; description: string; category?: string }[];
+  cardMachineFee?: number;
+  netBalance?: number;
 }
 
 export interface Receipt {

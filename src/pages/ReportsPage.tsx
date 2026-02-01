@@ -8,10 +8,13 @@ import { exportAllToExcel } from '@/lib/export';
 import { Download, FileText, TrendingUp, TrendingDown, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Service, Receipt } from '@/types';
+import { SmartFilters } from '@/components/SmartFilters';
+import { useFilters } from '@/contexts/FilterContext';
 
 export default function ReportsPage() {
   const { services, loading: servicesLoading } = useServices();
   const { receipts, loading: receiptsLoading, getLatestWorkingCapital, getTotalReceived } = useReceipts();
+  const { selectedMonth, selectedYear } = useFilters();
 
   if (servicesLoading || receiptsLoading) {
     return (
@@ -45,7 +48,9 @@ export default function ReportsPage() {
     toast.success('Relatório completo exportado com sucesso!');
   };
 
-  const currentMonth = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const periodLabel = selectedMonth === 'all'
+    ? `Ano de ${selectedYear}`
+    : new Date(selectedYear, selectedMonth as number).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
     <div className="space-y-6">
@@ -60,6 +65,8 @@ export default function ReportsPage() {
         }
       />
 
+      <SmartFilters />
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="animate-fade-in">
           <CardHeader className="flex flex-row items-center gap-4">
@@ -67,8 +74,8 @@ export default function ReportsPage() {
               <FileText className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle>Resumo do Mês</CardTitle>
-              <p className="text-sm text-muted-foreground capitalize">{currentMonth}</p>
+              <CardTitle>Resumo do Período</CardTitle>
+              <p className="text-sm text-muted-foreground capitalize">{periodLabel}</p>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
