@@ -4,11 +4,11 @@ import { ReceivedVsPendingChart, MonthlyEvolutionChart, ClientDistributionChart 
 import { useServices } from '@/hooks/useServices';
 import { useReceipts } from '@/hooks/useReceipts';
 import { formatCurrency } from '@/lib/data';
-import { Briefcase, TrendingUp, Clock, DollarSign, Loader2 } from 'lucide-react';
+import { Briefcase, TrendingUp, Clock, DollarSign, Loader2, PlayCircle, CheckCircle } from 'lucide-react';
 
 export default function Dashboard() {
-  const { services, loading: servicesLoading } = useServices();
-  const { receipts, loading: receiptsLoading, getTotalReceived, getLatestWorkingCapital } = useReceipts();
+  const { services, loading: servicesLoading, getServicesSummary } = useServices();
+  const { receipts, loading: receiptsLoading, getReceiptsSummary, calculateToReceive } = useReceipts();
 
   if (servicesLoading || receiptsLoading) {
     return (
@@ -18,15 +18,14 @@ export default function Dashboard() {
     );
   }
 
-  const totalReceived = getTotalReceived();
-  const totalValue = services.reduce((sum, s) => sum + s.value, 0);
-  const totalPending = totalValue - totalReceived;
-  const averagePerService = services.length > 0 ? totalValue / services.length : 0;
-  const workingCapital = getLatestWorkingCapital();
+  // Cálculos automáticos
+  const servicesSummary = getServicesSummary();
+  const receiptsSummary = getReceiptsSummary();
+  const toReceive = calculateToReceive(servicesSummary.totalValue);
 
   // Build monthly chart data from real data
   const monthlyData = [
-    { name: 'Este mês', received: totalReceived, pending: totalPending },
+    { name: 'Este mês', received: receiptsSummary.totalReceived, pending: toReceive > 0 ? toReceive : 0 },
   ];
 
   // Build client distribution from real services
@@ -50,31 +49,56 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total de Serviços"
-          value={services.length.toString()}
-          description="serviços cadastrados"
+          value={servicesSummary.total.toString()}
+          description={`${servicesSummary.pending} pendentes, ${servicesSummary.inProgress} em andamento`}
           icon={Briefcase}
           iconClassName="bg-primary/10 text-primary"
         />
         <StatCard
           title="Total Recebido"
-          value={formatCurrency(totalReceived)}
-          description="confirmados"
+          value={formatCurrency(receiptsSummary.totalReceived)}
+          description={`${receiptsSummary.count} recebimentos registrados`}
           icon={TrendingUp}
           iconClassName="bg-success/10 text-success"
         />
         <StatCard
           title="A Receber"
-          value={formatCurrency(totalPending)}
-          description="pendente"
+          value={formatCurrency(toReceive > 0 ? toReceive : 0)}
+          description={`${servicesSummary.completed} concluídos aguardando`}
           icon={Clock}
           iconClassName="bg-warning/10 text-warning"
         />
         <StatCard
           title="Capital de Giro"
-          value={formatCurrency(workingCapital)}
+          value={formatCurrency(receiptsSummary.workingCapital)}
           description="disponível"
           icon={DollarSign}
           iconClassName="bg-primary/10 text-primary"
+        />
+      </div>
+
+      {/* Resumo por Status */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          title="Em Andamento"
+          value={formatCurrency(servicesSummary.inProgressValue)}
+          description={`${servicesSummary.inProgress} serviços ativos`}
+          icon={PlayCircle}
+          iconClassName="bg-blue-500/10 text-blue-500"
+        />
+        <StatCard
+          title="Concluídos"
+          value={formatCurrency(servicesSummary.completedValue)}
+          description={`${servicesSummary.completed} aguardando pagamento`}
+          icon={CheckCircle}
+          iconClassName="bg-emerald-500/10 text-emerald-500"
+        />
+        <StatCard
+          title="Pagos"
+          value={formatCurrency(servicesSummary.paidValue)}
+          description={`${servicesSummary.paid} serviços finalizados`}
+          icon={TrendingUp}
+          iconClassName="bg-success/10 text-success"
         />
       </div>
 
@@ -89,7 +113,7 @@ export default function Dashboard() {
             {clientData.length > 0 && <ClientDistributionChart data={clientData} />}
             <StatCard
               title="Média por Serviço"
-              value={formatCurrency(averagePerService)}
+              value={formatCurrency(servicesSummary.total > 0 ? servicesSummary.totalValue / servicesSummary.total : 0)}
               description="baseado nos serviços cadastrados"
               icon={Briefcase}
               className="h-full flex flex-col justify-center"

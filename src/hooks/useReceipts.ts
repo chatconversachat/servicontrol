@@ -152,12 +152,41 @@ export function useReceipts() {
     return receipts.reduce((sum, receipt) => sum + receipt.receivedValue, 0);
   };
 
+  const getTotalExpected = () => {
+    return receipts.reduce((sum, receipt) => sum + receipt.expectedValue, 0);
+  };
+
+  const getTotalDifference = () => {
+    return receipts.reduce((sum, receipt) => sum + receipt.difference, 0);
+  };
+
   const getLatestWorkingCapital = () => {
     if (receipts.length === 0) return 0;
     const sorted = [...receipts].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     return sorted[0].workingCapital;
+  };
+
+  const getReceiptsSummary = () => {
+    const totalExpected = getTotalExpected();
+    const totalReceived = getTotalReceived();
+    const totalDifference = getTotalDifference();
+    const workingCapital = getLatestWorkingCapital();
+
+    return {
+      count: receipts.length,
+      totalExpected,
+      totalReceived,
+      totalDifference,
+      workingCapital,
+      percentageReceived: totalExpected > 0 ? (totalReceived / totalExpected) * 100 : 0,
+    };
+  };
+
+  // Calcular valores a receber baseado em serviços (total serviços - total recebido)
+  const calculateToReceive = (totalServicesValue: number) => {
+    return totalServicesValue - getTotalReceived();
   };
 
   return {
@@ -168,7 +197,11 @@ export function useReceipts() {
     deleteReceipt,
     getReceiptsByServiceId,
     getTotalReceived,
+    getTotalExpected,
+    getTotalDifference,
     getLatestWorkingCapital,
+    getReceiptsSummary,
+    calculateToReceive,
     refetch: fetchReceipts,
   };
 }
