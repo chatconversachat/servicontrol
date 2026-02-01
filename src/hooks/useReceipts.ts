@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useFilters } from '@/contexts/FilterContext';
@@ -16,30 +15,6 @@ interface Receipt {
   createdAt: string;
 }
 
-interface DbReceipt {
-  id: string;
-  service_id: string | null;
-  date: string;
-  expected_value: number;
-  received_value: number;
-  difference: number;
-  notes: string | null;
-  working_capital: number;
-  created_at: string;
-}
-
-const mapDbToReceipt = (db: DbReceipt): Receipt => ({
-  id: db.id,
-  serviceId: db.service_id,
-  date: db.date,
-  expectedValue: Number(db.expected_value),
-  receivedValue: Number(db.received_value),
-  difference: Number(db.difference),
-  notes: db.notes || '',
-  workingCapital: Number(db.working_capital),
-  createdAt: db.created_at,
-});
-
 export function useReceipts() {
   const [allReceipts, setAllReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,16 +29,13 @@ export function useReceipts() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase
-      .from('receipts')
-      .select('*')
-      .order('date', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching receipts:', error);
+    try {
+      const stored = localStorage.getItem(`receipts_${user.id}`);
+      const receipts = stored ? JSON.parse(stored) : [];
+      setAllReceipts(receipts);
+    } catch (err) {
+      console.error('Error fetching receipts:', err);
       toast.error('Erro ao carregar recebimentos');
-    } else {
-      setAllReceipts((data || []).map(mapDbToReceipt));
     }
     setLoading(false);
   }, [user]);
@@ -94,67 +66,41 @@ export function useReceipts() {
   }) => {
     if (!user) return null;
 
-    const { data, error } = await supabase
-      .from('receipts')
-      .insert({
-        user_id: user.id,
-        service_id: receipt.serviceId,
-        date: receipt.date,
-        expected_value: receipt.expectedValue,
-        received_value: receipt.receivedValue,
-        notes: receipt.notes,
-        working_capital: receipt.workingCapital,
-      })
-      .select()
-      .single();
+    const newReceipt: Receipt = {
+      ...receipt,
+      id: Date.now().toString(),
+      difference: receipt.expectedValue - receipt.receivedValue,
+      createdAt: new Date().toISOString(),
+    };
 
-    if (error) {
-      console.error('Error adding receipt:', error);
-      toast.error('Erro ao registrar recebimento');
-      return null;
-    }
-
-    const newReceipt = mapDbToReceipt(data);
-    setAllReceipts((prev) => [newReceipt, ...prev]);
+    const updated = [...allReceipts, newReceipt];
+    setAllReceipts(updated);
+    localStorage.setItem(`receipts_${user.id}`, JSON.stringify(updated));
+    toast.success('Recebimento registrado com sucesso!');
     return newReceipt;
   };
 
   const updateReceipt = async (id: string, updates: Partial<Receipt>) => {
-    const dbUpdates: Record<string, unknown> = {};
-    if (updates.serviceId !== undefined) dbUpdates.service_id = updates.serviceId;
-    if (updates.date !== undefined) dbUpdates.date = updates.date;
-    if (updates.expectedValue !== undefined) dbUpdates.expected_value = updates.expectedValue;
-    if (updates.receivedValue !== undefined) dbUpdates.received_value = updates.receivedValue;
-    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
-    if (updates.workingCapital !== undefined) dbUpdates.working_capital = updates.workingCapital;
+    setAllReceipts((prev) =>
+      prev.map((receipt) =>
+        receipt.id === id ? { ...receipt, ...updates } : receipt
+      )
+    );
 
-    const { error } = await supabase
-      .from('receipts')
-      .update(dbUpdates)
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error updating receipt:', error);
-      toast.error('Erro ao atualizar recebimento');
-      return;
+    if (user) {
+      localStorage.setItem(`receipts_${user.id}`, JSON.stringify(allReceipts));
     }
-
-    await fetchReceipts();
+    toast.success('Recebimento atualizado com sucesso!');
   };
 
   const deleteReceipt = async (id: string) => {
-    const { error } = await supabase
-      .from('receipts')
-      .delete()
-      .eq('id', id);
+    const updated = allReceipts.filter((receipt) => receipt.id !== id);
+    setAllReceipts(updated);
 
-    if (error) {
-      console.error('Error deleting receipt:', error);
-      toast.error('Erro ao excluir recebimento');
-      return;
+    if (user) {
+      localStorage.setItem(`receipts_${user.id}`, JSON.stringify(updated));
     }
-
-    setAllReceipts((prev) => prev.filter((receipt) => receipt.id !== id));
+    toast.success('Recebimento removido com sucesso!');
   };
 
   const getReceiptsByServiceId = (serviceId: string) => {
@@ -217,3 +163,4 @@ export function useReceipts() {
     refetch: fetchReceipts,
   };
 }
+
