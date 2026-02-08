@@ -271,8 +271,34 @@ export function useServices() {
     setAllServices((prev) => prev.filter((service) => service.id !== id));
   };
 
+  const getServicesSummary = useCallback(() => {
+    const all = allServices;
+    const pending = all.filter(s => s.status === 'pending');
+    const inProgress = all.filter(s => s.status === 'in_progress');
+    const completed = all.filter(s => s.status === 'completed');
+    const paid = all.filter(s => s.status === 'paid');
+    const overdue = all.filter(s => s.status === 'overdue');
+
+    const sum = (arr: Service[]) => arr.reduce((s, svc) => s + svc.value, 0);
+
+    return {
+      total: all.length,
+      totalValue: sum(all),
+      pending: pending.length,
+      pendingValue: sum(pending),
+      inProgress: inProgress.length,
+      inProgressValue: sum(inProgress),
+      completed: completed.length,
+      completedValue: sum(completed),
+      paid: paid.length,
+      paidValue: sum(paid),
+      overdue: overdue.length,
+      overdueValue: sum(overdue),
+    };
+  }, [allServices]);
+
   return {
-    services: monthlyServices, // Mantendo compatibilidade com código existente que espera filteredServices
+    services: monthlyServices,
     monthlyServices,
     servicesInProgress,
     servicesWaitingPayment,
@@ -283,6 +309,7 @@ export function useServices() {
     updateService,
     updateStatus,
     deleteService,
+    getServicesSummary,
     refetch: fetchServices,
   };
 }
