@@ -1,6 +1,6 @@
-import { Service, Receipt, MonthlySummary, ChartData, ClientDistribution } from '@/types';
+import { Service, ServiceStatus } from '@/types';
 
-// Mock data for demonstration
+// Mock data for demonstration - Updated with costs
 export const mockServices: Service[] = [
   {
     id: '1',
@@ -8,6 +8,7 @@ export const mockServices: Service[] = [
     client: 'Imobiliária Central',
     description: 'Reforma completa apartamento 101',
     value: 15000,
+    costs: 5000,
     status: 'paid',
     expectedDate: '2025-01-15',
     daysWorked: 12,
@@ -21,6 +22,7 @@ export const mockServices: Service[] = [
     client: 'Construtora ABC',
     description: 'Pintura externa prédio comercial',
     value: 8500,
+    costs: 3000,
     status: 'completed',
     expectedDate: '2025-01-20',
     daysWorked: 5,
@@ -34,6 +36,7 @@ export const mockServices: Service[] = [
     client: 'Residencial Park',
     description: 'Manutenção hidráulica',
     value: 3200,
+    costs: 1000,
     status: 'in_progress',
     expectedDate: '2025-01-25',
     daysWorked: 2,
@@ -47,6 +50,7 @@ export const mockServices: Service[] = [
     client: 'Imobiliária Central',
     description: 'Instalação elétrica casa 45',
     value: 5800,
+    costs: 2000,
     status: 'pending',
     expectedDate: '2025-02-01',
     daysWorked: 0,
@@ -60,6 +64,7 @@ export const mockServices: Service[] = [
     client: 'Condomínio Sol',
     description: 'Reparos área comum',
     value: 12000,
+    costs: 4500,
     status: 'overdue',
     expectedDate: '2025-01-10',
     daysWorked: 8,
@@ -69,7 +74,7 @@ export const mockServices: Service[] = [
   },
 ];
 
-export const mockReceipts: Receipt[] = [
+export const mockReceipts: any[] = [
   {
     id: '1',
     serviceId: '1',
@@ -94,7 +99,7 @@ export const mockReceipts: Receipt[] = [
   },
 ];
 
-export const getMonthlyData = (): ChartData[] => [
+export const getMonthlyData = (): any[] => [
   { name: 'Set', received: 28000, pending: 5000 },
   { name: 'Out', received: 32000, pending: 8000 },
   { name: 'Nov', received: 25000, pending: 12000 },
@@ -102,14 +107,14 @@ export const getMonthlyData = (): ChartData[] => [
   { name: 'Jan', received: 21000, pending: 23500 },
 ];
 
-export const getClientDistribution = (): ClientDistribution[] => [
+export const getClientDistribution = (): any[] => [
   { name: 'Imobiliária Central', value: 20800 },
   { name: 'Construtora ABC', value: 8500 },
   { name: 'Residencial Park', value: 3200 },
   { name: 'Condomínio Sol', value: 12000 },
 ];
 
-export const calculateMonthlySummary = (services: Service[], receipts: Receipt[]): MonthlySummary => {
+export const calculateMonthlySummary = (services: Service[], receipts: any[]): any => {
   const totalServices = services.length;
   const totalReceived = receipts.reduce((sum, r) => sum + r.receivedValue, 0);
   const totalValue = services.reduce((sum, s) => sum + s.value, 0);
@@ -127,6 +132,7 @@ export const calculateMonthlySummary = (services: Service[], receipts: Receipt[]
 };
 
 export const formatCurrency = (value: number): string => {
+  if (isNaN(value)) return 'R$ 0,00';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -134,16 +140,19 @@ export const formatCurrency = (value: number): string => {
 };
 
 export const formatDate = (date: string): string => {
-  return new Date(date).toLocaleDateString('pt-BR');
+  if (!date) return '---';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '---';
+  return d.toLocaleDateString('pt-BR');
 };
 
 export const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
     pending: 'Pendente',
     in_progress: 'Em Andamento',
-    completed: 'Concluído',
+    completed: 'Aguardando Pagamento',
     paid: 'Pago',
-    overdue: 'Atrasado',
+    overdue: 'Aguardando Acerto',
   };
   return labels[status] || status;
 };
@@ -152,9 +161,9 @@ export const getStatusClass = (status: string): string => {
   const classes: Record<string, string> = {
     pending: 'status-pending',
     in_progress: 'bg-primary/10 text-primary border-primary/20',
-    completed: 'bg-success/10 text-success border-success/20',
+    completed: 'bg-amber-100 text-amber-700 border-amber-200',
     paid: 'status-paid',
-    overdue: 'status-overdue',
+    overdue: 'bg-rose-100 text-rose-700 border-rose-200',
   };
   return classes[status] || '';
 };

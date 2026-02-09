@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useFilters } from '@/contexts/FilterContext';
 
 interface Receipt {
   id: string;
@@ -40,13 +41,14 @@ const mapDbToReceipt = (db: DbReceipt): Receipt => ({
 });
 
 export function useReceipts() {
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [allReceipts, setAllReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { selectedYear, selectedMonth } = useFilters();
 
   const fetchReceipts = useCallback(async () => {
     if (!user) {
-      setReceipts([]);
+      setAllReceipts([]);
       setLoading(false);
       return;
     }
@@ -61,7 +63,7 @@ export function useReceipts() {
       console.error('Error fetching receipts:', error);
       toast.error('Erro ao carregar recebimentos');
     } else {
-      setReceipts((data || []).map(mapDbToReceipt));
+      setAllReceipts((data || []).map(mapDbToReceipt));
     }
     setLoading(false);
   }, [user]);
@@ -69,6 +71,18 @@ export function useReceipts() {
   useEffect(() => {
     fetchReceipts();
   }, [fetchReceipts]);
+
+  const filteredReceipts = useMemo(() => {
+    return allReceipts.filter(r => {
+      const date = new Date(r.date);
+      if (isNaN(date.getTime())) return true;
+
+      const matchesYear = date.getFullYear() === selectedYear;
+      const matchesMonth = selectedMonth === 'all' || date.getMonth() === selectedMonth;
+
+      return matchesYear && matchesMonth;
+    });
+  }, [allReceipts, selectedYear, selectedMonth]);
 
   const addReceipt = async (receipt: {
     serviceId: string;
@@ -101,7 +115,7 @@ export function useReceipts() {
     }
 
     const newReceipt = mapDbToReceipt(data);
-    setReceipts((prev) => [newReceipt, ...prev]);
+    setAllReceipts((prev) => [newReceipt, ...prev]);
     return newReceipt;
   };
 
@@ -125,7 +139,6 @@ export function useReceipts() {
       return;
     }
 
-    // Refetch to get computed difference
     await fetchReceipts();
   };
 
@@ -141,28 +154,28 @@ export function useReceipts() {
       return;
     }
 
-    setReceipts((prev) => prev.filter((receipt) => receipt.id !== id));
+    setAllReceipts((prev) => prev.filter((receipt) => receipt.id !== id));
   };
 
   const getReceiptsByServiceId = (serviceId: string) => {
-    return receipts.filter((receipt) => receipt.serviceId === serviceId);
+    return filteredReceipts.filter((receipt) => receipt.serviceId === serviceId);
   };
 
   const getTotalReceived = () => {
-    return receipts.reduce((sum, receipt) => sum + receipt.receivedValue, 0);
+    return filteredReceipts.reduce((sum, receipt) => sum + receipt.receivedValue, 0);
   };
 
   const getTotalExpected = () => {
-    return receipts.reduce((sum, receipt) => sum + receipt.expectedValue, 0);
+    return filteredReceipts.reduce((sum, receipt) => sum + receipt.expectedValue, 0);
   };
 
   const getTotalDifference = () => {
-    return receipts.reduce((sum, receipt) => sum + receipt.difference, 0);
+    return filteredReceipts.reduce((sum, receipt) => sum + receipt.difference, 0);
   };
 
   const getLatestWorkingCapital = () => {
-    if (receipts.length === 0) return 0;
-    const sorted = [...receipts].sort(
+    if (filteredReceipts.length === 0) return 0;
+    const sorted = [...filteredReceipts].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     return sorted[0].workingCapital;
@@ -175,7 +188,7 @@ export function useReceipts() {
     const workingCapital = getLatestWorkingCapital();
 
     return {
-      count: receipts.length,
+      count: filteredReceipts.length,
       totalExpected,
       totalReceived,
       totalDifference,
@@ -184,13 +197,12 @@ export function useReceipts() {
     };
   };
 
-  // Calcular valores a receber baseado em serviços (total serviços - total recebido)
   const calculateToReceive = (totalServicesValue: number) => {
     return totalServicesValue - getTotalReceived();
   };
 
   return {
-    receipts,
+    receipts: filteredReceipts,
     loading,
     addReceipt,
     updateReceipt,

@@ -3,6 +3,7 @@ import {
   FileText,
   Receipt,
   BarChart3,
+  Settings,
   LogOut,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
@@ -29,6 +30,7 @@ const menuItems = [
   { title: 'Serviços', url: '/servicos', icon: FileText },
   { title: 'Recebimentos', url: '/recebimentos', icon: Receipt },
   { title: 'Relatórios', url: '/relatorios', icon: BarChart3 },
+  { title: 'Configurações', url: '/configuracoes', icon: Settings },
 ];
 
 export function AppSidebar() {
