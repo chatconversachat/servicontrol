@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { useSettings, TrelloSettings } from '@/hooks/useSettings';
-import { Save, Loader2, RefreshCw } from 'lucide-react';
+import { Save, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { TrelloClient } from '@/integrations/trello/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TrelloBoard } from '@/integrations/trello/types';
