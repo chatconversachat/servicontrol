@@ -18,6 +18,8 @@ export default function SettingsPage() {
     // Initialize availableBoards from saved settings if available
     const [availableBoards, setAvailableBoards] = useState<TrelloBoard[]>(settings.savedBoards || []);
     const [loadingBoards, setLoadingBoards] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
+    const [showToken, setShowToken] = useState(false);
 
     const fetchBoards = async () => {
         if (!formData.apiKey || !formData.token) {
