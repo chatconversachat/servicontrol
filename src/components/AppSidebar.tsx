@@ -68,7 +68,6 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/50">
-            {!collapsed && 'Menu Principal'}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
