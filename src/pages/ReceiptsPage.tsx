@@ -119,11 +119,28 @@ export default function ReceiptsPage() {
               ))}
             </TabsList>
 
-            {listsWithCards.map(({ list, cards }) => (
-              <TabsContent key={list.id} value={list.id} className="mt-4">
-                <TrelloCardsList cards={cards} />
-              </TabsContent>
-            ))}
+            {listsWithCards.map(({ list, cards }) => {
+              const total = cards.reduce((sum, card) => {
+                const match = `${card.name} ${card.desc}`.match(/R?\$\s*([\d.,]+)/);
+                if (!match) return sum;
+                const cleaned = match[1].replace(/\./g, '').replace(',', '.').trim();
+                return sum + (parseFloat(cleaned) || 0);
+              }, 0);
+
+              return (
+                <TabsContent key={list.id} value={list.id} className="mt-4 space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
+                    <span className="text-sm text-muted-foreground font-medium">
+                      Total da lista ({cards.length} cartões)
+                    </span>
+                    <span className="text-lg font-bold text-primary">
+                      R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <TrelloCardsList cards={cards} />
+                </TabsContent>
+              );
+            })}
           </Tabs>
         </div>
       ) : hasTrelloConfig && trelloError ? (
