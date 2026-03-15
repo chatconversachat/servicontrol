@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { useSettings, TrelloSettings } from '@/hooks/useSettings';
-import { Save, Loader2, RefreshCw } from 'lucide-react';
+import { Save, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { TrelloClient } from '@/integrations/trello/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TrelloBoard } from '@/integrations/trello/types';
@@ -15,9 +15,10 @@ import { TrelloBoard } from '@/integrations/trello/types';
 export default function SettingsPage() {
     const { settings, saveSettings } = useSettings();
     const [formData, setFormData] = useState<TrelloSettings>(settings);
-    // Initialize availableBoards from saved settings if available
     const [availableBoards, setAvailableBoards] = useState<TrelloBoard[]>(settings.savedBoards || []);
     const [loadingBoards, setLoadingBoards] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
+    const [showToken, setShowToken] = useState(false);
 
     const fetchBoards = async () => {
         if (!formData.apiKey || !formData.token) {
