@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { useSettings, TrelloSettings } from '@/hooks/useSettings';
-import { Save, Loader2, RefreshCw } from 'lucide-react';
+import { Save, Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { TrelloClient } from '@/integrations/trello/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TrelloBoard } from '@/integrations/trello/types';
@@ -15,9 +15,10 @@ import { TrelloBoard } from '@/integrations/trello/types';
 export default function SettingsPage() {
     const { settings, saveSettings } = useSettings();
     const [formData, setFormData] = useState<TrelloSettings>(settings);
-    // Initialize availableBoards from saved settings if available
     const [availableBoards, setAvailableBoards] = useState<TrelloBoard[]>(settings.savedBoards || []);
     const [loadingBoards, setLoadingBoards] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
+    const [showToken, setShowToken] = useState(false);
 
     const fetchBoards = async () => {
         if (!formData.apiKey || !formData.token) {
@@ -88,12 +89,25 @@ export default function SettingsPage() {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="apiKey">API Key</Label>
-                                <Input
-                                    id="apiKey"
-                                    placeholder="Sua API Key do Trello"
-                                    value={formData.apiKey}
-                                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="apiKey"
+                                        type={showApiKey ? 'text' : 'password'}
+                                        placeholder="Sua API Key do Trello"
+                                        value={formData.apiKey}
+                                        onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowApiKey(!showApiKey)}
+                                    >
+                                        {showApiKey ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                                    </Button>
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                     Obtenha em: <a href="https://trello.com/app-key" target="_blank" rel="noreferrer" className="text-primary hover:underline">trello.com/app-key</a>
                                 </p>
@@ -101,13 +115,25 @@ export default function SettingsPage() {
 
                             <div className="space-y-2">
                                 <Label htmlFor="token">Token</Label>
-                                <Input
-                                    id="token"
-                                    type="password"
-                                    placeholder="Seu Token do Trello"
-                                    value={formData.token}
-                                    onChange={(e) => setFormData({ ...formData, token: e.target.value })}
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="token"
+                                        type={showToken ? 'text' : 'password'}
+                                        placeholder="Seu Token do Trello"
+                                        value={formData.token}
+                                        onChange={(e) => setFormData({ ...formData, token: e.target.value })}
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowToken(!showToken)}
+                                    >
+                                        {showToken ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                                    </Button>
+                                </div>
                             </div>
 
                             <Separator />

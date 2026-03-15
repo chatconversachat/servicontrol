@@ -19,24 +19,7 @@ const defaultSettings: TrelloSettings = {
 };
 
 export const useSettings = () => {
-    const [settings, setSettings] = useState<TrelloSettings>(defaultSettings);
-
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            // Migration for old single boardId
-            if (parsed.boardId && !parsed.boardIds) {
-                parsed.boardIds = [parsed.boardId];
-                delete parsed.boardId;
-            }
-            // Ensure savedBoards exists
-            if (!parsed.savedBoards) {
-                parsed.savedBoards = [];
-            }
-            setSettings(parsed);
-        }
-    }, []);
+    const [settings, setSettings] = useState<TrelloSettings>(() => getTrelloSettings());
 
     const saveSettings = (newSettings: TrelloSettings) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
