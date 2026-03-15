@@ -89,12 +89,25 @@ export default function SettingsPage() {
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="apiKey">API Key</Label>
-                                <Input
-                                    id="apiKey"
-                                    placeholder="Sua API Key do Trello"
-                                    value={formData.apiKey}
-                                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="apiKey"
+                                        type={showApiKey ? 'text' : 'password'}
+                                        placeholder="Sua API Key do Trello"
+                                        value={formData.apiKey}
+                                        onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowApiKey(!showApiKey)}
+                                    >
+                                        {showApiKey ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                                    </Button>
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                     Obtenha em: <a href="https://trello.com/app-key" target="_blank" rel="noreferrer" className="text-primary hover:underline">trello.com/app-key</a>
                                 </p>
@@ -102,13 +115,25 @@ export default function SettingsPage() {
 
                             <div className="space-y-2">
                                 <Label htmlFor="token">Token</Label>
-                                <Input
-                                    id="token"
-                                    type="password"
-                                    placeholder="Seu Token do Trello"
-                                    value={formData.token}
-                                    onChange={(e) => setFormData({ ...formData, token: e.target.value })}
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="token"
+                                        type={showToken ? 'text' : 'password'}
+                                        placeholder="Seu Token do Trello"
+                                        value={formData.token}
+                                        onChange={(e) => setFormData({ ...formData, token: e.target.value })}
+                                        className="pr-10"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                        onClick={() => setShowToken(!showToken)}
+                                    >
+                                        {showToken ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                                    </Button>
+                                </div>
                             </div>
 
                             <Separator />
