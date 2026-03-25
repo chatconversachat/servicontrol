@@ -159,6 +159,37 @@ export function ClientDistributionChart({ data }: { data: { name: string; value:
   );
 }
 
+export function StatusDistributionChart({ data }: { data: { name: string; value: number; count: number }[] }) {
+  return (
+    <ChartCard title="Distribuição por Status">
+      <ResponsiveContainer width="100%" height={300}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={95}
+            paddingAngle={2}
+            dataKey="value"
+            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+            labelLine={false}
+          >
+            {data.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, '']}
+            contentStyle={tooltipStyle}
+          />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  );
+}
+
 export function CostsBreakdownChart({ data }: { data: { name: string; value: number }[] }) {
   return (
     <ChartCard title="Custos por Categoria">
