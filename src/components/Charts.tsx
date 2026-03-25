@@ -205,17 +205,3 @@ export function CostsBreakdownChart({ data }: { data: { name: string; value: num
     </ChartCard>
   );
 }
-  return (
-    <ChartCard title="Custos por Categoria">
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={data} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-          <XAxis type="number" tickFormatter={currencyFormatter} className="text-xs" />
-          <YAxis type="category" dataKey="name" width={90} className="text-xs" tick={{ fontSize: 11 }} />
-          <Tooltip formatter={tooltipFormatter} contentStyle={tooltipStyle} />
-          <Bar dataKey="value" name="Custo" fill="hsl(0, 72%, 51%)" radius={[0, 4, 4, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartCard>
-  );
-}
