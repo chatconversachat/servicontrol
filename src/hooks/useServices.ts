@@ -285,7 +285,7 @@ export function useServices() {
   };
 
   const getServicesSummary = useCallback(() => {
-    const all = allServices;
+    const all = services; // Use filtered services
     const pending = all.filter(s => s.status === 'pending');
     const inProgress = all.filter(s => s.status === 'in_progress');
     const completed = all.filter(s => s.status === 'completed');
@@ -308,11 +308,10 @@ export function useServices() {
       overdue: overdue.length,
       overdueValue: sum(overdue),
     };
-  }, [allServices]);
+  }, [services]);
 
   return {
-    services: monthlyServices,
-    monthlyServices,
+    services,
     servicesInProgress,
     servicesWaitingPayment,
     servicesWaitingSettlement,
