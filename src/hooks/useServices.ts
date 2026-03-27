@@ -29,6 +29,9 @@ export interface Service {
   expenses?: { date: string; value: number; description: string; category?: string }[];
   cardMachineFee?: number;
   netBalance?: number;
+  listMonthIndex?: number;
+  listYear?: number;
+  listName?: string;
 }
 
 interface DbService {
