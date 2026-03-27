@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function ServicesPage() {
   const {
-    monthlyServices,
+    services: monthlyServices,
     servicesInProgress,
     servicesWaitingPayment,
     servicesWaitingSettlement,
@@ -51,7 +51,6 @@ export default function ServicesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Serviços"
-        description="Gerencie todos os serviços prestados"
         actions={
           <>
             <Button variant="outline" onClick={() => handleExport(monthlyServices)} className="gap-2">

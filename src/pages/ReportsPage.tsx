@@ -253,7 +253,7 @@ export default function ReportsPage() {
                   key={status}
                   className="rounded-lg border p-4 text-center transition-colors hover:bg-muted/50"
                 >
-                  <p className="text-2xl font-bold">{count}</p>
+                  <p className="text-2xl font-bold">{count as number}</p>
                   <p className="text-sm text-muted-foreground">{getStatusLabel(status)}</p>
                 </div>
               ))}
