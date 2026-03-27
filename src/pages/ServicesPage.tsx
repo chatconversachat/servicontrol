@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function ServicesPage() {
   const {
-    monthlyServices,
+    services: monthlyServices,
     servicesInProgress,
     servicesWaitingPayment,
     servicesWaitingSettlement,
