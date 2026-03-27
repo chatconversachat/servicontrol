@@ -126,6 +126,25 @@ export const mapTrelloCardToService = (
     const calculatedTotalCosts = expenses.reduce((sum, exp) => sum + exp.value, 0);
     const calculatedNetBalance = value - calculatedTotalCosts;
 
+    // Extract month index from list name for filtering
+    let listMonthIndex = -1;
+    let listYear = new Date().getFullYear();
+    if (isMonthList) {
+        const monthsForIndex = ['janeiro', 'fevereiro', 'março', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        const monthIndexMap = [0, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        for (let i = 0; i < monthsForIndex.length; i++) {
+            if (listNameLower.includes(monthsForIndex[i])) {
+                listMonthIndex = monthIndexMap[i];
+                break;
+            }
+        }
+        // Try to extract year from list name (e.g., "Janeiro 2025")
+        const yearMatch = listName.match(/\b(20\d{2})\b/);
+        if (yearMatch) {
+            listYear = parseInt(yearMatch[1]);
+        }
+    }
+
     return {
         id: card.id,
         code: code,
@@ -138,13 +157,16 @@ export const mapTrelloCardToService = (
         expectedDate: card.due || '',
         daysWorked: 0,
         dailyRate: 0,
-        period: isMonthList ? 'monthly' : 'other', // Marcando se vem de lista de mês
+        period: isMonthList ? 'monthly' : 'other',
         createdAt: card.dateLastActivity,
         contractorName,
         contractorValue,
         contractorPayments,
         expenses,
         cardMachineFee,
-        netBalance: calculatedNetBalance
+        netBalance: calculatedNetBalance,
+        listMonthIndex,
+        listYear,
+        listName,
     };
 };
