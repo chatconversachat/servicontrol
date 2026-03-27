@@ -83,6 +83,22 @@ export default function Dashboard() {
       .sort((a, b) => b.value - a.value);
   }, [allServices]);
 
+  // Cost distribution per service/budget
+  const costPerServiceData = useMemo(() => {
+    return allServices
+      .filter(s => (s.costs || 0) > 0)
+      .map(s => {
+        const label = s.code ? `${s.code}` : s.description?.substring(0, 20) || 'Serviço';
+        return {
+          name: label.length > 18 ? label.substring(0, 18) + '..' : label,
+          value: s.costs || 0,
+          fullName: s.client ? `${s.code} - ${s.client}` : s.code || s.description || 'Serviço',
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 15);
+  }, [allServices]);
+
   // Status distribution for pie chart
   const statusData = useMemo(() => {
     const statusMap: Record<string, { count: number; value: number }> = {};
@@ -294,9 +310,10 @@ export default function Dashboard() {
             {clientData.length > 0 && <ClientDistributionChart data={clientData} />}
           </div>
 
-          {costsData.length > 0 && (
+          {(costsData.length > 0 || costPerServiceData.length > 0) && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <CostsBreakdownChart data={costsData} />
+              {costPerServiceData.length > 0 && <CostsBreakdownChart data={costPerServiceData} title="Custos por Orçamento" />}
+              {costsData.length > 0 && <CostsBreakdownChart data={costsData} title="Custos por Categoria" />}
             </div>
           )}
         </>
