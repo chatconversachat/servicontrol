@@ -29,6 +29,9 @@ export interface Service {
   expenses?: { date: string; value: number; description: string; category?: string }[];
   cardMachineFee?: number;
   netBalance?: number;
+  listMonthIndex?: number;
+  listYear?: number;
+  listName?: string;
 }
 
 interface DbService {
@@ -147,28 +150,38 @@ export function useServices() {
     }
   }, [allServices, setAvailableYears]);
 
-  // Filtro Mensal (Apenas cards de listas de meses)
-  const monthlyServices = useMemo(() => {
+  // Filtered services based on year/month
+  const services = useMemo(() => {
     return allServices.filter(s => {
-      if (s.period !== 'monthly') return false;
+      // For Trello month-list cards, use listMonthIndex/listYear
+      if (s.period === 'monthly' && s.listMonthIndex !== undefined && s.listMonthIndex >= 0) {
+        const matchesYear = (s.listYear || new Date().getFullYear()) === selectedYear;
+        const matchesMonth = selectedMonth === 'all' || s.listMonthIndex === selectedMonth;
+        return matchesYear && matchesMonth;
+      }
 
+      // For non-Trello or non-month cards, use date-based filtering
+      if (s.period === 'other') {
+        // Status-based cards (Em Andamento, Ag. Pagamento, etc.) always show
+        return true;
+      }
+
+      // Fallback: date-based filtering
       const dateStr = s.expectedDate || s.createdAt;
-      if (!dateStr) return false;
-
+      if (!dateStr) return true;
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return false;
+      if (isNaN(date.getTime())) return true;
 
       const matchesYear = date.getFullYear() === selectedYear;
       const matchesMonth = selectedMonth === 'all' || date.getMonth() === selectedMonth;
-
       return matchesYear && matchesMonth;
     });
   }, [allServices, selectedYear, selectedMonth]);
 
-  // Outros status (Cards de listas específicas, independente do filtro de mês)
-  const servicesInProgress = useMemo(() => allServices.filter(s => s.status === 'in_progress'), [allServices]);
-  const servicesWaitingPayment = useMemo(() => allServices.filter(s => s.status === 'completed'), [allServices]);
-  const servicesWaitingSettlement = useMemo(() => allServices.filter(s => s.status === 'overdue'), [allServices]);
+  // Status-specific lists (always from filtered set)
+  const servicesInProgress = useMemo(() => services.filter(s => s.status === 'in_progress'), [services]);
+  const servicesWaitingPayment = useMemo(() => services.filter(s => s.status === 'completed'), [services]);
+  const servicesWaitingSettlement = useMemo(() => services.filter(s => s.status === 'overdue'), [services]);
 
   const addService = async (service: Omit<Service, 'id' | 'createdAt'>) => {
     if (useTrello) {
@@ -271,9 +284,34 @@ export function useServices() {
     setAllServices((prev) => prev.filter((service) => service.id !== id));
   };
 
+  const getServicesSummary = useCallback(() => {
+    const all = services; // Use filtered services
+    const pending = all.filter(s => s.status === 'pending');
+    const inProgress = all.filter(s => s.status === 'in_progress');
+    const completed = all.filter(s => s.status === 'completed');
+    const paid = all.filter(s => s.status === 'paid');
+    const overdue = all.filter(s => s.status === 'overdue');
+
+    const sum = (arr: Service[]) => arr.reduce((s, svc) => s + svc.value, 0);
+
+    return {
+      total: all.length,
+      totalValue: sum(all),
+      pending: pending.length,
+      pendingValue: sum(pending),
+      inProgress: inProgress.length,
+      inProgressValue: sum(inProgress),
+      completed: completed.length,
+      completedValue: sum(completed),
+      paid: paid.length,
+      paidValue: sum(paid),
+      overdue: overdue.length,
+      overdueValue: sum(overdue),
+    };
+  }, [services]);
+
   return {
-    services: monthlyServices, // Mantendo compatibilidade com código existente que espera filteredServices
-    monthlyServices,
+    services,
     servicesInProgress,
     servicesWaitingPayment,
     servicesWaitingSettlement,
@@ -283,6 +321,7 @@ export function useServices() {
     updateService,
     updateStatus,
     deleteService,
+    getServicesSummary,
     refetch: fetchServices,
   };
 }
