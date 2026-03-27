@@ -150,28 +150,38 @@ export function useServices() {
     }
   }, [allServices, setAvailableYears]);
 
-  // Filtro Mensal (Apenas cards de listas de meses)
-  const monthlyServices = useMemo(() => {
+  // Filtered services based on year/month
+  const services = useMemo(() => {
     return allServices.filter(s => {
-      if (s.period !== 'monthly') return false;
+      // For Trello month-list cards, use listMonthIndex/listYear
+      if (s.period === 'monthly' && s.listMonthIndex !== undefined && s.listMonthIndex >= 0) {
+        const matchesYear = (s.listYear || new Date().getFullYear()) === selectedYear;
+        const matchesMonth = selectedMonth === 'all' || s.listMonthIndex === selectedMonth;
+        return matchesYear && matchesMonth;
+      }
 
+      // For non-Trello or non-month cards, use date-based filtering
+      if (s.period === 'other') {
+        // Status-based cards (Em Andamento, Ag. Pagamento, etc.) always show
+        return true;
+      }
+
+      // Fallback: date-based filtering
       const dateStr = s.expectedDate || s.createdAt;
-      if (!dateStr) return false;
-
+      if (!dateStr) return true;
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return false;
+      if (isNaN(date.getTime())) return true;
 
       const matchesYear = date.getFullYear() === selectedYear;
       const matchesMonth = selectedMonth === 'all' || date.getMonth() === selectedMonth;
-
       return matchesYear && matchesMonth;
     });
   }, [allServices, selectedYear, selectedMonth]);
 
-  // Outros status (Cards de listas específicas, independente do filtro de mês)
-  const servicesInProgress = useMemo(() => allServices.filter(s => s.status === 'in_progress'), [allServices]);
-  const servicesWaitingPayment = useMemo(() => allServices.filter(s => s.status === 'completed'), [allServices]);
-  const servicesWaitingSettlement = useMemo(() => allServices.filter(s => s.status === 'overdue'), [allServices]);
+  // Status-specific lists (always from filtered set)
+  const servicesInProgress = useMemo(() => services.filter(s => s.status === 'in_progress'), [services]);
+  const servicesWaitingPayment = useMemo(() => services.filter(s => s.status === 'completed'), [services]);
+  const servicesWaitingSettlement = useMemo(() => services.filter(s => s.status === 'overdue'), [services]);
 
   const addService = async (service: Omit<Service, 'id' | 'createdAt'>) => {
     if (useTrello) {
