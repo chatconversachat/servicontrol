@@ -187,33 +187,33 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Row 2 - Status breakdown */}
+      {/* Row 2 - Status breakdown with % */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Em Andamento"
           value={formatCurrency(summary.inProgressValue)}
-          description={`${summary.inProgress} serviços ativos`}
+          description={`${summary.inProgress} serviços | ${summary.totalValue > 0 ? ((summary.inProgressValue / summary.totalValue) * 100).toFixed(1) : 0}% do faturamento`}
           icon={PlayCircle}
           iconClassName="bg-blue-500/10 text-blue-500"
         />
         <StatCard
           title="Ag. Pagamento"
           value={formatCurrency(summary.completedValue)}
-          description={`${summary.completed} aguardando`}
+          description={`${summary.completed} aguardando | ${summary.totalValue > 0 ? ((summary.completedValue / summary.totalValue) * 100).toFixed(1) : 0}% do faturamento`}
           icon={Clock}
           iconClassName="bg-amber-500/10 text-amber-500"
         />
         <StatCard
           title="Ag. Acerto"
           value={formatCurrency(summary.overdueValue)}
-          description={`${summary.overdue} serviços`}
+          description={`${summary.overdue} serviços | ${summary.totalValue > 0 ? ((summary.overdueValue / summary.totalValue) * 100).toFixed(1) : 0}% do faturamento`}
           icon={Receipt}
           iconClassName="bg-orange-500/10 text-orange-500"
         />
         <StatCard
           title="Pagos"
           value={formatCurrency(summary.paidValue)}
-          description={`${summary.paid} serviços finalizados`}
+          description={`${summary.paid} serviços | ${summary.totalValue > 0 ? ((summary.paidValue / summary.totalValue) * 100).toFixed(1) : 0}% do faturamento`}
           icon={CheckCircle}
           iconClassName="bg-emerald-500/10 text-emerald-500"
         />
