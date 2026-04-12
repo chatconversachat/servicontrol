@@ -9,14 +9,10 @@ import { Service } from '@/types';
 import { formatCurrency, formatDate } from '@/lib/data';
 import { StatusBadge } from '@/components/StatusBadge';
 import {
-    TrendingDown,
-    TrendingUp,
     Users,
     Wallet,
-    Hammer,
     Receipt,
     ArrowRight,
-    Calculator,
     Minus,
     Equal,
     PieChart as PieChartIcon
@@ -27,8 +23,8 @@ import {
     Cell,
     Tooltip,
     ResponsiveContainer,
-    Legend
 } from 'recharts';
+import { cn } from '@/lib/utils';
 
 interface ServiceDetailModalProps {
     service: Service | null;
@@ -57,18 +53,13 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
     ];
     const workingCapital = profit > 0 ? profit * 0.14 : 0;
 
-    const totalPaidToContractor = service.contractorPayments?.reduce((sum, p) => sum + p.value, 0) || 0;
-
-    // Agrupar custos por categoria para o gráfico
     const getCategoryData = () => {
         if (!service.expenses) return [];
-
         const categories: Record<string, number> = {};
         service.expenses.forEach(exp => {
             const cat = exp.category || 'Extras';
             categories[cat] = (categories[cat] || 0) + exp.value;
         });
-
         return Object.entries(categories).map(([name, value]) => ({
             name,
             value,
@@ -77,173 +68,164 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
     };
 
     const categoryData = getCategoryData();
+    const hasExpenses = service.expenses && service.expenses.length > 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl bg-slate-50 border-none shadow-2xl p-0 overflow-hidden flex flex-col max-h-[95vh]">
-                {/* Header Profissional */}
-                <div className="bg-primary p-6 text-white shrink-0 shadow-lg">
+            <DialogContent className="max-w-6xl bg-background border shadow-2xl p-0 overflow-hidden max-h-[98vh]">
+                {/* Compact Header */}
+                <div className="bg-primary px-4 py-3 text-primary-foreground">
                     <DialogHeader>
                         <div className="flex justify-between items-center">
-                            <div>
-                                <p className="text-primary-foreground/70 text-xs font-mono mb-1">{service.code}</p>
-                                <DialogTitle className="text-2xl font-black truncate max-w-[500px] leading-tight text-white mb-2">
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="text-primary-foreground/60 text-[10px] font-mono">{service.code}</span>
+                                    <StatusBadge status={service.status} className="scale-90" />
+                                    <span className="text-[9px] text-primary-foreground/50">Criado {formatDate(service.createdAt)}</span>
+                                </div>
+                                <DialogTitle className="text-lg font-bold truncate text-primary-foreground leading-tight">
                                     {service.client}
                                 </DialogTitle>
                                 {service.address && (
-                                    <p className="text-sm text-white/80 font-medium mb-2 flex items-center gap-1">
-                                        <span className="opacity-60">Endereço:</span> {service.address}
-                                    </p>
+                                    <p className="text-[10px] text-primary-foreground/60 truncate mt-0.5">{service.address}</p>
                                 )}
-                                <div className="flex items-center gap-2">
-                                    <StatusBadge status={service.status} />
-                                    <span className="text-xs text-white/60">• Criado em {formatDate(service.createdAt)}</span>
-                                </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-[10px] font-bold text-white/60 uppercase tracking-tighter">Resultado Líquido</p>
-                                <p className="text-3xl font-black text-white">{formatCurrency(profit)}</p>
+                            <div className="text-right pl-4">
+                                <p className="text-[8px] font-bold text-primary-foreground/50 uppercase tracking-wider">Resultado</p>
+                                <p className={cn("text-2xl font-black", profit >= 0 ? "text-primary-foreground" : "text-red-300")}>
+                                    {formatCurrency(profit)}
+                                </p>
                             </div>
                         </div>
                     </DialogHeader>
                 </div>
 
-                <div className="p-6 space-y-6 overflow-y-auto">
-                    {/* EQUAÇÃO FINANCEIRA */}
-                    <div className="bg-white p-6 rounded-3xl border shadow-sm space-y-4">
-                        <h3 className="text-xs font-black flex items-center gap-2 uppercase tracking-widest text-slate-800">
-                            <Calculator className="h-4 w-4 text-primary" /> Equação Financeira da Obra
-                        </h3>
-
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-2">
-                            <div className="flex-1 w-full p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center">
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Valor Fechado</p>
-                                <p className="text-xl font-black text-slate-900">{formatCurrency(budgetValue)}</p>
-                            </div>
-                            <Minus className="h-5 w-5 text-slate-300 shrink-0" />
-                            <div className="flex-1 w-full p-4 bg-red-50 rounded-2xl border border-dashed border-red-100 text-center">
-                                <p className="text-[10px] text-red-400 uppercase font-bold mb-1">Total Custos Abatidos</p>
-                                <p className="text-xl font-black text-red-600">{formatCurrency(totalCosts)}</p>
-                            </div>
-                            <Equal className="h-5 w-5 text-slate-300 shrink-0" />
-                            <div className="flex-1 w-full p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center ring-2 ring-emerald-500/20">
-                                <p className="text-[10px] text-emerald-500 uppercase font-bold mb-1">Saldo Líquido</p>
-                                <p className="text-xl font-black text-emerald-600">{formatCurrency(profit)}</p>
-                            </div>
+                {/* Body - No scroll, everything fits */}
+                <div className="p-3 space-y-3">
+                    {/* Financial Equation - Compact inline */}
+                    <div className="flex items-center gap-2 bg-muted/30 rounded-xl p-2.5 border">
+                        <div className="flex-1 text-center p-2 bg-card rounded-lg border">
+                            <p className="text-[8px] text-muted-foreground uppercase font-bold">Valor Fechado</p>
+                            <p className="text-sm font-black">{formatCurrency(budgetValue)}</p>
+                        </div>
+                        <Minus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 text-center p-2 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-100 dark:border-red-900/30">
+                            <p className="text-[8px] text-red-500 uppercase font-bold">Custos</p>
+                            <p className="text-sm font-black text-red-600">{formatCurrency(totalCosts)}</p>
+                        </div>
+                        <Equal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <div className="flex-1 text-center p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-900/30 ring-1 ring-emerald-500/20">
+                            <p className="text-[8px] text-emerald-500 uppercase font-bold">Saldo</p>
+                            <p className="text-sm font-black text-emerald-600">{formatCurrency(profit)}</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* GRÁFICO DE CUSTOS POR CATEGORIA */}
-                        <div className="bg-white p-6 rounded-3xl border shadow-sm space-y-4 col-span-1 lg:col-span-1">
-                            <h3 className="text-xs font-black flex items-center gap-2 uppercase tracking-widest text-slate-800">
-                                <PieChartIcon className="h-4 w-4 text-amber-500" /> Distribuição de Custos
+                    {/* Main Grid: 3 columns */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* Col 1: Cost Chart + Category list */}
+                        <div className="bg-card rounded-xl border p-3 space-y-2">
+                            <h3 className="text-[9px] font-bold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+                                <PieChartIcon className="h-3 w-3 text-amber-500" /> Custos por Categoria
                             </h3>
                             {categoryData.length > 0 ? (
                                 <>
-                                    <div className="h-[220px] w-full">
+                                    <div className="h-[120px]">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
-                                                <Pie
-                                                    data={categoryData}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={45}
-                                                    outerRadius={65}
-                                                    paddingAngle={4}
-                                                    dataKey="value"
-                                                >
-                                                    {categoryData.map((_, index) => (
-                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                <Pie data={categoryData} cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={3} dataKey="value">
+                                                    {categoryData.map((_, i) => (
+                                                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
                                                     ))}
                                                 </Pie>
-                                                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                                                <Tooltip formatter={(v: number) => formatCurrency(v)} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </div>
-                                    <div className="space-y-1">
-                                        {categoryData.map((cat, idx) => (
-                                            <div key={idx} className="flex justify-between items-center text-[10px]">
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                                                    <span className="font-bold text-slate-600 truncate max-w-[100px]">{cat.name}</span>
+                                    <div className="space-y-0.5">
+                                        {categoryData.map((cat, i) => (
+                                            <div key={i} className="flex justify-between items-center text-[9px] py-0.5">
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                                    <span className="text-muted-foreground truncate max-w-[80px]">{cat.name}</span>
                                                 </div>
-                                                <span className="font-black text-slate-900">{cat.percent.toFixed(1)}%</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="font-bold">{formatCurrency(cat.value)}</span>
+                                                    <span className="text-muted-foreground">{cat.percent.toFixed(0)}%</span>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </>
                             ) : (
-                                <p className="text-xs text-muted-foreground italic py-12 text-center">Sem dados de custos categorizados.</p>
+                                <p className="text-[10px] text-muted-foreground italic text-center py-6">Sem dados</p>
                             )}
                         </div>
 
-                        {/* DETALHAMENTO DE CUSTOS (LISTA) */}
-                        <div className="bg-white p-6 rounded-3xl border shadow-sm space-y-4 col-span-1 lg:col-span-1">
-                            <h3 className="text-xs font-black flex items-center gap-2 uppercase tracking-widest text-slate-800">
-                                <Receipt className="h-4 w-4 text-red-500" /> Lista de Despesas
+                        {/* Col 2: Expenses List */}
+                        <div className="bg-card rounded-xl border p-3 space-y-2">
+                            <h3 className="text-[9px] font-bold flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+                                <Receipt className="h-3 w-3 text-red-500" /> Despesas ({service.expenses?.length || 0})
                             </h3>
-                            <div className="space-y-1.5 max-h-[350px] overflow-y-auto pr-1">
-                                {service.expenses && service.expenses.length > 0 ? (
-                                    service.expenses.map((e, i) => (
-                                        <div key={i} className="flex flex-col p-2 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100 group">
-                                            <div className="flex justify-between items-center mb-0.5">
-                                                <span className="font-bold text-slate-400 text-[9px]">{e.date}</span>
-                                                <span className="font-black text-slate-900 text-xs">{formatCurrency(e.value)}</span>
+                            {hasExpenses ? (
+                                <div className="space-y-0.5 max-h-[220px] overflow-y-auto pr-0.5">
+                                    {service.expenses!.map((e, i) => (
+                                        <div key={i} className="flex justify-between items-center py-1 px-1.5 hover:bg-muted/50 rounded text-[10px] border-b border-muted last:border-0">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-medium truncate">{e.description}</p>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[8px] text-muted-foreground">{e.date}</span>
+                                                    {e.category && (
+                                                        <span className="text-[7px] px-1 py-px rounded bg-muted text-muted-foreground uppercase">{e.category}</span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-slate-700 truncate font-medium text-[11px]">{e.description}</span>
-                                                <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-bold uppercase">{e.category}</span>
-                                            </div>
+                                            <span className="font-bold text-red-600 ml-2 shrink-0">{formatCurrency(e.value)}</span>
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-xs text-muted-foreground italic py-8 text-center">Nenhum custo listado.</p>
-                                )}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-[10px] text-muted-foreground italic text-center py-6">Nenhuma despesa</p>
+                            )}
                         </div>
 
-                        {/* DISTRIBUIÇÃO DE SÓCIOS */}
-                        <div className="bg-slate-900 rounded-3xl p-7 text-white flex flex-col col-span-1 lg:col-span-1">
-                            <h3 className="text-[10px] font-black flex items-center gap-2 uppercase tracking-[0.2em] text-primary/60 mb-6">
-                                <Users className="h-4 w-4" /> Distribuição (Sócios)
+                        {/* Col 3: Partner Distribution */}
+                        <div className="bg-slate-900 dark:bg-slate-950 rounded-xl p-3 text-white space-y-2">
+                            <h3 className="text-[9px] font-bold flex items-center gap-1.5 uppercase tracking-wider text-primary/50">
+                                <Users className="h-3 w-3" /> Distribuição
                             </h3>
-
-                            <div className="space-y-3 flex-1">
+                            <div className="space-y-1.5">
                                 {distributions.map(dist => (
-                                    <div key={dist.name} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center font-black text-primary text-xs">
+                                    <div key={dist.name} className="flex items-center justify-between p-2 bg-white/5 rounded-lg border border-white/5">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-6 w-6 rounded bg-primary/20 flex items-center justify-center font-bold text-primary text-[10px]">
                                                 {dist.name.charAt(0)}
                                             </div>
                                             <div>
-                                                <p className="text-xs font-black text-white">{dist.name}</p>
-                                                <p className="text-[9px] font-bold text-white/40 uppercase">{dist.percent}%</p>
+                                                <p className="text-[10px] font-bold">{dist.name}</p>
+                                                <p className="text-[8px] text-white/40">{dist.percent}%</p>
                                             </div>
                                         </div>
-                                        <p className="text-sm font-black text-white">{formatCurrency(dist.value)}</p>
+                                        <p className="text-xs font-bold">{formatCurrency(dist.value)}</p>
                                     </div>
                                 ))}
-
-                                <div className="p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20 flex items-center justify-between mt-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
-                                            <Wallet className="h-4 w-4 text-white" />
+                                <div className="flex items-center justify-between p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-6 w-6 rounded bg-blue-500 flex items-center justify-center">
+                                            <Wallet className="h-3 w-3 text-white" />
                                         </div>
                                         <div>
-                                            <p className="text-xs font-black text-white">Giro</p>
-                                            <p className="text-[9px] font-bold text-blue-400 uppercase">14%</p>
+                                            <p className="text-[10px] font-bold">Giro</p>
+                                            <p className="text-[8px] text-blue-400">14%</p>
                                         </div>
                                     </div>
-                                    <p className="text-sm font-black text-blue-400">{formatCurrency(workingCapital)}</p>
+                                    <p className="text-xs font-bold text-blue-400">{formatCurrency(workingCapital)}</p>
                                 </div>
                             </div>
-
-                            <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center text-emerald-400">
-                                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Saldo Final</span>
-                                <div className="flex items-center gap-2">
-                                    <ArrowRight className="h-4 w-4" />
-                                    <span className="text-xl font-black">{formatCurrency(profit)}</span>
+                            <div className="pt-2 border-t border-white/10 flex justify-between items-center text-emerald-400">
+                                <span className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Saldo Final</span>
+                                <div className="flex items-center gap-1">
+                                    <ArrowRight className="h-3 w-3" />
+                                    <span className="text-base font-black">{formatCurrency(profit)}</span>
                                 </div>
                             </div>
                         </div>
