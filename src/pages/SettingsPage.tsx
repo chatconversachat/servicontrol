@@ -13,6 +13,8 @@ import { Save, Loader2, RefreshCw, Eye, EyeOff, Bell, MessageSquare, Smartphone 
 import { TrelloClient } from '@/integrations/trello/client';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TrelloBoard } from '@/integrations/trello/types';
+import { EvolutionApiSettings } from '@/components/EvolutionApiSettings';
+import { getEvolutionSettings } from '@/hooks/useEvolutionSettings';
 
 export default function SettingsPage() {
     const { settings, saveSettings } = useSettings();
