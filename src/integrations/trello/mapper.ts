@@ -1,6 +1,96 @@
 import { Service, ServiceStatus } from '../../types';
 import { TrelloCard, TrelloList } from './types';
 
+const parseBrazilianValue = (text: string): number => {
+    if (!text) return 0;
+    const cleaned = text.replace(/R?\$?\s*/gi, '').replace(/\./g, '').replace(',', '.').trim();
+    return parseFloat(cleaned) || 0;
+};
+
+/**
+ * Parse card title to extract: budget code, client, address, and inline value.
+ * 
+ * Common title formats:
+ * "0001-25 Imobiliária ABC = Rua XYZ, 123 R$ 5.000,00"
+ * "0002-25 Cliente Particular = Av. Brasil 456"
+ * "(0003-25) Imob. Delta - Rua Tal 789 R$3.500,00"
+ * "Imobiliária Teste = Endereço aqui"
+ * "0010-26 João Silva = Rua das Flores, 100 apt 201"
+ */
+function parseTrelloTitle(title: string): {
+    code: string;
+    client: string;
+    address: string;
+    inlineValue: number;
+} {
+    let remaining = title.trim();
+    let code = '';
+    let client = '';
+    let address = '';
+    let inlineValue = 0;
+
+    // 1. Extract budget code: patterns like "0001-25", "(0001-25)", "[0001-25]"
+    const codeMatch = remaining.match(/[\[(]?(\d{1,4}[-/]\d{2})[\])]?/);
+    if (codeMatch) {
+        code = codeMatch[1].replace('/', '-');
+        remaining = remaining.replace(codeMatch[0], '').trim();
+    }
+
+    // 2. Extract inline monetary value: R$ 5.000,00 or similar at end
+    const valueMatch = remaining.match(/R?\$\s*([\d.,]+)\s*$/i);
+    if (valueMatch) {
+        inlineValue = parseBrazilianValue(valueMatch[1]);
+        remaining = remaining.replace(valueMatch[0], '').trim();
+    }
+    // Also try value anywhere in the string if not found at end
+    if (inlineValue === 0) {
+        const valueMatchAny = remaining.match(/R?\$\s*([\d.,]+)/i);
+        if (valueMatchAny) {
+            inlineValue = parseBrazilianValue(valueMatchAny[1]);
+            remaining = remaining.replace(valueMatchAny[0], '').trim();
+        }
+    }
+
+    // 3. Split client and address by separator: "=" or " - " (but not inside values)
+    // Priority: "=" then " - "
+    const separatorMatch = remaining.match(/^(.+?)\s*[=]\s*(.+)$/);
+    if (separatorMatch) {
+        client = separatorMatch[1].trim();
+        address = separatorMatch[2].trim();
+    } else {
+        const dashMatch = remaining.match(/^(.+?)\s+-\s+(.+)$/);
+        if (dashMatch) {
+            // Check if second part looks like an address (contains street keywords or numbers)
+            const secondPart = dashMatch[2].trim();
+            const addressKeywords = /\b(rua|av|avenida|travessa|alameda|praça|rodovia|estrada|condomínio|cond|lote|apt|bloco|qd|quadra|setor|bairro|jardim|jd|vila|res|residencial|ed|edifício|prédio)\b/i;
+            if (addressKeywords.test(secondPart) || /\d{2,}/.test(secondPart)) {
+                client = dashMatch[1].trim();
+                address = secondPart;
+            } else {
+                client = remaining.trim();
+            }
+        } else {
+            client = remaining.trim();
+        }
+    }
+
+    // Clean up trailing/leading separators and whitespace
+    client = client.replace(/^[-–—:]+|[-–—:]+$/g, '').trim();
+    address = address.replace(/^[-–—:]+|[-–—:]+$/g, '').trim();
+
+    return { code, client, address, inlineValue };
+}
+
+const getCategory = (desc: string): string => {
+    const d = desc.toLowerCase();
+    if (d.includes('combustível') || d.includes('combustivel') || d.includes('99') || d.includes('uber') || d.includes('gasolina') || d.includes('moto') || d.includes('palio') || d.includes('corsa')) return 'Combustível';
+    if (d.includes('almoço') || d.includes('janta') || d.includes('comida') || d.includes('refeição') || d.includes('lanche')) return 'Alimentação';
+    if (d.includes('material') || d.includes('materiais') || d.includes('concreto') || d.includes('nf') || d.includes('ferramenta')) return 'Materiais';
+    if (d.includes('adiantamento') || d.includes('final') || d.includes('mão de obra') || d.includes('mao de obra')) return 'Mão de Obra';
+    if (d.includes('imposto') || d.includes('taxa') || d.includes('maquininha') || d.includes('iss') || d.includes('simples')) return 'Imposto/Taxas';
+    return 'Extras';
+};
+
 export const mapTrelloCardToService = (
     card: TrelloCard,
     lists: TrelloList[]
@@ -12,78 +102,53 @@ export const mapTrelloCardToService = (
     let status: ServiceStatus = 'pending';
     let isMonthList = false;
 
-    // Meses em português
     const months = ['janeiro', 'fevereiro', 'março', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-
-    // Verifica se o nome da lista contém um mês
     isMonthList = months.some(m => listNameLower.includes(m));
 
-    // Mapeamento de Status baseado no nome da lista (Prioridade para os status fixos)
     if (listNameLower.includes('andamento')) {
         status = 'in_progress';
     } else if (listNameLower.includes('pagamento')) {
-        status = 'completed'; // Aguardando Pagamento (pode ser mapeado para completed ou um novo status)
+        status = 'completed';
     } else if (listNameLower.includes('acerto')) {
-        status = 'overdue'; // Usando overdue para "Aguardando Acerto" ou podemos criar um novo futuramente
+        status = 'overdue';
     } else if (listNameLower.includes('pago') || listNameLower.includes('concluído')) {
         status = 'paid';
     } else if (isMonthList) {
-        status = 'pending'; // Por padrão, se está numa lista de mês e não diz o status, assume pendente
+        status = 'pending';
     }
 
     const fullText = `${card.name} ${card.desc}`;
 
-    const parseBrazilianValue = (text: string): number => {
-        if (!text) return 0;
-        let cleaned = text.replace(/R?\$?\s*/gi, '').replace(/\./g, '').replace(',', '.').trim();
-        return parseFloat(cleaned) || 0;
-    };
+    // --- PARSE TITLE into separate fields ---
+    const parsed = parseTrelloTitle(card.name);
 
-    // --- CATEGORIZAÇÃO ---
-    const getCategory = (desc: string): string => {
-        const d = desc.toLowerCase();
-        if (d.includes('combustível') || d.includes('combustivel') || d.includes('99') || d.includes('uber') || d.includes('gasolina') || d.includes('moto') || d.includes('palio') || d.includes('corsa')) return 'Combustível';
-        if (d.includes('almoço') || d.includes('janta') || d.includes('comida') || d.includes('refeição') || d.includes('lanche')) return 'Alimentação';
-        if (d.includes('material') || d.includes('materiais') || d.includes('concreto') || d.includes('nf') || d.includes('ferramenta')) return 'Materiais';
-        if (d.includes('adiantamento') || d.includes('final') || d.includes('mão de obra') || d.includes('mao de obra')) return 'Mão de Obra';
-        if (d.includes('imposto') || d.includes('taxa') || d.includes('maquininha') || d.includes('iss') || d.includes('simples')) return 'Imposto/Taxas';
-        return 'Extras';
-    };
-
-    // --- EXTRAÇÃO DO TÍTULO (CLIENTE E ENDEREÇO) ---
-    let rawTitle = card.name;
-    let code = `#${card.id.substring(0, 4)}`;
-    const codeRegex = /(\d+-\d+)/;
-    const codeMatch = fullText.match(codeRegex);
-
-    if (codeMatch) {
-        code = codeMatch[1];
-        rawTitle = rawTitle.replace(codeRegex, '').replace(/[()\][]/g, '').trim();
+    // Generate code if not found in title
+    let code = parsed.code;
+    if (!code) {
+        // Try to find code in description
+        const descCodeMatch = card.desc.match(/[\[(]?(\d{1,4}[-/]\d{2})[\])]?/);
+        if (descCodeMatch) {
+            code = descCodeMatch[1].replace('/', '-');
+        } else {
+            code = `#${card.id.substring(0, 4)}`;
+        }
     }
 
-    let client = rawTitle.trim();
-    let address = '';
+    const client = parsed.client || 'Cliente não identificado';
+    const address = parsed.address;
 
-    if (rawTitle.includes('=')) {
-        const parts = rawTitle.split('=');
-        client = parts[0].trim();
-        address = parts[1].trim();
-    }
-
-    // --- EXTRAÇÃO DE VALORES E CUSTOS ---
-
-    // 1. Valor Fechado
+    // --- VALUE EXTRACTION ---
     let value = 0;
     const valueMatch = fullText.match(/Valor Fechado[:\s]*R?\$?\s*([\d.,]+)/i);
     if (valueMatch) value = parseBrazilianValue(valueMatch[1]);
-    if (value === 0) value = parseBrazilianValue(card.name);
+    if (value === 0) value = parsed.inlineValue;
 
-    // 2. Valor Maquininha
+    // Card machine fee
     let cardMachineFee = 0;
     const machineMatch = fullText.match(/Valor Maquininha[:\s]*R?\$?\s*([\d.,]+)/i);
     if (machineMatch) cardMachineFee = parseBrazilianValue(machineMatch[1]);
 
-    // 3. Prestador
+    // Contractor
     let contractorName = '';
     let contractorValue = 0;
     const contractorMatch = fullText.match(/Valor\s+(?!(?:Fechado|Maquininha))([\wÁ-ú\s]+)[:\s]*R?\$?\s*([\d.,]+)/i);
@@ -126,7 +191,7 @@ export const mapTrelloCardToService = (
     const calculatedTotalCosts = expenses.reduce((sum, exp) => sum + exp.value, 0);
     const calculatedNetBalance = value - calculatedTotalCosts;
 
-    // Extract month index from list name for filtering
+    // Extract month index from list name
     let listMonthIndex = -1;
     let listYear = new Date().getFullYear();
     if (isMonthList) {
@@ -138,7 +203,6 @@ export const mapTrelloCardToService = (
                 break;
             }
         }
-        // Try to extract year from list name (e.g., "Janeiro 2025")
         const yearMatch = listName.match(/\b(20\d{2})\b/);
         if (yearMatch) {
             listYear = parseInt(yearMatch[1]);
@@ -147,13 +211,13 @@ export const mapTrelloCardToService = (
 
     return {
         id: card.id,
-        code: code,
-        client: client || 'Cliente não identificado',
-        address: address,
+        code,
+        client,
+        address,
         description: card.desc,
-        value: value,
+        value,
         costs: calculatedTotalCosts,
-        status: status,
+        status,
         expectedDate: card.due || '',
         daysWorked: 0,
         dailyRate: 0,
