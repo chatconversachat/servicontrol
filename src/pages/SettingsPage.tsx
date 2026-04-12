@@ -121,7 +121,7 @@ export default function SettingsPage() {
                             </div>
                             <div className="flex items-center justify-between rounded-lg border p-4 opacity-60">
                                 <div className="flex items-center gap-3">
-                                    <MessageSquare className="h-5 w-5 text-emerald-600" />
+                                    <MessageSquare className="h-5 w-5 text-primary" />
                                     <div>
                                         <p className="text-sm font-medium">WhatsApp</p>
                                         <p className="text-xs text-muted-foreground">Em breve — conecte o Twilio nas configurações</p>
