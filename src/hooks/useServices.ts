@@ -136,6 +136,11 @@ export function useServices() {
     if (allServices.length > 0) {
       const yearsSet = new Set<number>();
       allServices.forEach(s => {
+        // For Trello month-list cards, use listYear directly
+        if (s.listYear && s.listMonthIndex !== undefined && s.listMonthIndex >= 0) {
+          yearsSet.add(s.listYear);
+          return;
+        }
         const dateStr = s.expectedDate || s.createdAt;
         if (dateStr) {
           const date = new Date(dateStr);
@@ -160,17 +165,11 @@ export function useServices() {
         return matchesYear && matchesMonth;
       }
 
-      // For non-Trello or non-month cards, use date-based filtering
-      if (s.period === 'other') {
-        // Status-based cards (Em Andamento, Ag. Pagamento, etc.) always show
-        return true;
-      }
-
-      // Fallback: date-based filtering
+      // For status-based cards (period === 'other'), use dateLastActivity or createdAt for year filter
       const dateStr = s.expectedDate || s.createdAt;
-      if (!dateStr) return true;
+      if (!dateStr) return selectedMonth === 'all'; // Show only in "all months" if no date
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return true;
+      if (isNaN(date.getTime())) return selectedMonth === 'all';
 
       const matchesYear = date.getFullYear() === selectedYear;
       const matchesMonth = selectedMonth === 'all' || date.getMonth() === selectedMonth;
