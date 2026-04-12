@@ -91,7 +91,7 @@ export default function Dashboard() {
 
   const monthlyData = useMemo(() => {
     const monthMap: Record<string, { received: number; pending: number; costs: number; count: number }> = {};
-    allServices.forEach(s => {
+    services.forEach(s => {
       const dateStr = s.expectedDate || s.createdAt;
       if (!dateStr) return;
       const date = new Date(dateStr);
@@ -110,11 +110,11 @@ export default function Dashboard() {
         const [year, month] = key.split('-');
         return { name: `${MONTH_NAMES[parseInt(month)]}/${year.slice(2)}`, ...val };
       });
-  }, [allServices]);
+  }, [services]);
 
   const clientRanking = useMemo(() => {
     const map: Record<string, { revenue: number; count: number; costs: number }> = {};
-    allServices.forEach(s => {
+    services.forEach(s => {
       const name = s.client || 'Não identificado';
       if (!map[name]) map[name] = { revenue: 0, count: 0, costs: 0 };
       map[name].revenue += s.value;
@@ -133,10 +133,10 @@ export default function Dashboard() {
         avgTicket: d.count > 0 ? d.revenue / d.count : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue);
-  }, [allServices]);
+  }, [services]);
 
   const servicesProfitability = useMemo(() => {
-    return allServices
+    return services
       .filter(s => s.value > 0)
       .map(s => {
         const costs = s.costs || 0;
@@ -151,11 +151,11 @@ export default function Dashboard() {
       })
       .sort((a, b) => b.margin - a.margin)
       .slice(0, 12);
-  }, [allServices]);
+  }, [services]);
 
   const costComposition = useMemo(() => {
     let contractorTotal = 0, expensesTotal = 0, cardFeeTotal = 0;
-    allServices.forEach(s => {
+    services.forEach(s => {
       contractorTotal += s.contractorValue || 0;
       cardFeeTotal += s.cardMachineFee || 0;
       if (s.expenses) s.expenses.forEach(e => { expensesTotal += e.value; });
@@ -167,10 +167,10 @@ export default function Dashboard() {
       { name: 'Taxas Maquininha', value: cardFeeTotal },
     ].filter(i => i.value > 0);
     return items.map(i => ({ ...i, percent: total > 0 ? (i.value / total) * 100 : 0 }));
-  }, [allServices]);
+  }, [services]);
 
   const costPerServiceData = useMemo(() => {
-    return allServices
+    return services
       .filter(s => (s.costs || 0) > 0)
       .map(s => ({
         name: (s.code || s.description?.substring(0, 18) || 'Serviço').substring(0, 18),
@@ -179,11 +179,11 @@ export default function Dashboard() {
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 12);
-  }, [allServices]);
+  }, [services]);
 
   const expenseCategoryData = useMemo(() => {
     const cats: Record<string, number> = {};
-    allServices.forEach(s => {
+    services.forEach(s => {
       if (s.expenses) s.expenses.forEach(e => {
         const cat = e.category || 'Outros';
         cats[cat] = (cats[cat] || 0) + e.value;
@@ -193,7 +193,7 @@ export default function Dashboard() {
     return Object.entries(cats)
       .map(([name, value]) => ({ name, value, percent: total > 0 ? (value / total) * 100 : 0 }))
       .sort((a, b) => b.value - a.value);
-  }, [allServices]);
+  }, [services]);
 
   const statusData = useMemo(() => {
     const statusMap: Record<string, { count: number; value: number }> = {};
@@ -201,7 +201,7 @@ export default function Dashboard() {
       pending: 'Pendente', in_progress: 'Em Andamento', completed: 'Ag. Pagamento',
       paid: 'Pago', overdue: 'Ag. Acerto',
     };
-    allServices.forEach(s => {
+    services.forEach(s => {
       if (!statusMap[s.status]) statusMap[s.status] = { count: 0, value: 0 };
       statusMap[s.status].count++;
       statusMap[s.status].value += s.value;
@@ -209,7 +209,7 @@ export default function Dashboard() {
     return Object.entries(statusMap)
       .map(([status, data]) => ({ name: labels[status] || status, value: data.value, count: data.count }))
       .sort((a, b) => b.value - a.value);
-  }, [allServices]);
+  }, [services]);
 
   if (servicesLoading || receiptsLoading) {
     return (
@@ -221,13 +221,13 @@ export default function Dashboard() {
 
   const summary = getServicesSummary();
   const receiptsSummary = getReceiptsSummary();
-  const totalCosts = allServices.reduce((sum, s) => sum + (s.costs || 0), 0);
+  const totalCosts = services.reduce((sum, s) => sum + (s.costs || 0), 0);
   const totalNetBalance = summary.totalValue - totalCosts;
   const profitMargin = summary.totalValue > 0 ? ((totalNetBalance / summary.totalValue) * 100) : 0;
   const avgTicket = summary.total > 0 ? summary.totalValue / summary.total : 0;
   const conversionRate = summary.total > 0 ? ((summary.paid / summary.total) * 100) : 0;
-  const totalContractorValue = allServices.reduce((sum, s) => sum + (s.contractorValue || 0), 0);
-  const totalCardMachineFees = allServices.reduce((sum, s) => sum + (s.cardMachineFee || 0), 0);
+  const totalContractorValue = services.reduce((sum, s) => sum + (s.contractorValue || 0), 0);
+  const totalCardMachineFees = services.reduce((sum, s) => sum + (s.cardMachineFee || 0), 0);
   const totalToReceive = summary.inProgressValue + summary.completedValue + summary.overdueValue;
   const paidPercent = summary.totalValue > 0 ? (summary.paidValue / summary.totalValue) * 100 : 0;
   const costsPercent = summary.totalValue > 0 ? (totalCosts / summary.totalValue) * 100 : 0;
@@ -493,7 +493,7 @@ export default function Dashboard() {
       )}
 
       {/* ═══ ROW 6: Charts ═══ */}
-      {allServices.length > 0 ? (
+      {services.length > 0 ? (
         <div className="space-y-4">
           <MonthlyEvolutionChart data={monthlyData} />
 
