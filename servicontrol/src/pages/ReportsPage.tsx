@@ -11,6 +11,7 @@ import { Service, Receipt } from '@/types';
 import { SmartFilters } from '@/components/SmartFilters';
 import { useFilters } from '@/contexts/FilterContext';
 import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 
 export default function ReportsPage() {
   const { services, allServices, loading: servicesLoading } = useServices();
@@ -23,12 +24,13 @@ export default function ReportsPage() {
     const netBalance = totalValue - totalCosts;
     const margin = totalValue > 0 ? ((netBalance / totalValue) * 100) : 0;
 
-    const clientMap: Record<string, { count: number; value: number }> = {};
+    const clientMap: Record<string, { count: number; value: number; costs: number }> = {};
     services.forEach(s => {
       const name = s.client || 'Não identificado';
-      if (!clientMap[name]) clientMap[name] = { count: 0, value: 0 };
+      if (!clientMap[name]) clientMap[name] = { count: 0, value: 0, costs: 0 };
       clientMap[name].count++;
       clientMap[name].value += s.value;
+      clientMap[name].costs += s.costs || 0;
     });
     const topClients = Object.entries(clientMap)
       .sort(([, a], [, b]) => b.value - a.value)
@@ -43,9 +45,17 @@ export default function ReportsPage() {
         });
       }
     });
-    const expenseCategories = Object.entries(categoryMap).sort(([, a], [, b]) => b - a);
+    const totalCategoryExpenses = Object.values(categoryMap).reduce((s, v) => s + v, 0);
+    const expenseCategories = Object.entries(categoryMap)
+      .sort(([, a], [, b]) => b - a)
+      .map(([cat, val]) => ({
+        category: cat,
+        value: val,
+        percentOfCategory: totalCategoryExpenses > 0 ? (val / totalCategoryExpenses) * 100 : 0,
+        percentOfTotal: totalValue > 0 ? (val / totalValue) * 100 : 0,
+      }));
 
-    return { totalValue, totalCosts, netBalance, margin, topClients, expenseCategories };
+    return { totalValue, totalCosts, netBalance, margin, topClients, expenseCategories, totalCategoryExpenses };
   }, [services]);
 
   if (servicesLoading || receiptsLoading) {
@@ -79,173 +89,214 @@ export default function ReportsPage() {
     : new Date(selectedYear, selectedMonth as number).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-3 md:space-y-4">
       <PageHeader
         title="Relatórios"
         description="Resumo financeiro e análise de dados"
         actions={
-          <Button size="sm" onClick={handleExportAll} className="gap-1.5 text-xs md:text-sm">
-            <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            Exportar Tudo
+          <Button size="sm" onClick={handleExportAll} className="gap-1.5 text-xs">
+            <Download className="h-3.5 w-3.5" />
+            Exportar
           </Button>
         }
       />
 
       <SmartFilters />
 
-      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-3 md:gap-4 pb-3">
-            <div className="rounded-lg bg-primary/10 p-2.5 md:p-3">
-              <FileText className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+      {/* KPIs Row */}
+      <div className="grid gap-2 md:gap-3 grid-cols-2 md:grid-cols-4">
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="rounded-md bg-primary/10 p-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
             </div>
-            <div>
-              <CardTitle className="text-base md:text-lg">Resumo do Período</CardTitle>
-              <p className="text-xs md:text-sm text-muted-foreground capitalize">{periodLabel}</p>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-xs md:text-sm text-muted-foreground">Total de Serviços</span>
-              <span className="font-bold text-base md:text-lg">{services.length}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-xs md:text-sm text-muted-foreground">Faturamento Bruto</span>
-              <span className="font-bold text-base md:text-lg">{formatCurrency(totalValue)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-xs md:text-sm text-muted-foreground">Média por Serviço</span>
-              <span className="font-bold text-base md:text-lg">{formatCurrency(averagePerService)}</span>
-            </div>
-          </CardContent>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Faturamento</span>
+          </div>
+          <p className="text-lg font-bold tabular-nums">{formatCurrency(totalValue)}</p>
+          <p className="text-[10px] text-muted-foreground capitalize">{periodLabel}</p>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-3 md:gap-4 pb-3">
-            <div className="rounded-lg bg-emerald-500/10 p-2.5 md:p-3">
-              <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="rounded-md bg-emerald-500/10 p-1.5">
+              <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
             </div>
-            <div>
-              <CardTitle className="text-base md:text-lg">Situação Financeira</CardTitle>
-              <p className="text-xs md:text-sm text-muted-foreground">Recebimentos e pendências</p>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Saldo Líquido</span>
+          </div>
+          <p className={cn("text-lg font-bold tabular-nums", financials.netBalance >= 0 ? "text-emerald-600" : "text-red-600")}>
+            {formatCurrency(financials.netBalance)}
+          </p>
+          <p className="text-[10px] text-muted-foreground">Margem {financials.margin.toFixed(1)}%</p>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="rounded-md bg-red-500/10 p-1.5">
+              <TrendingDown className="h-3.5 w-3.5 text-red-500" />
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            <div className="flex justify-between items-center py-2 border-b">
-              <div className="flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                <span className="text-xs md:text-sm text-muted-foreground">Total Recebido</span>
-              </div>
-              <span className="font-bold text-base md:text-lg text-emerald-500">{formatCurrency(totalReceived)}</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Custos</span>
+          </div>
+          <p className="text-lg font-bold tabular-nums text-red-600">{formatCurrency(financials.totalCosts)}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {totalValue > 0 ? ((financials.totalCosts / totalValue) * 100).toFixed(1) : '0'}% do faturamento
+          </p>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="rounded-md bg-blue-500/10 p-1.5">
+              <Wallet className="h-3.5 w-3.5 text-blue-500" />
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <div className="flex items-center gap-1.5">
-                <TrendingDown className="h-3.5 w-3.5 text-amber-500" />
-                <span className="text-xs md:text-sm text-muted-foreground">A Receber</span>
-              </div>
-              <span className="font-bold text-base md:text-lg text-amber-500">{formatCurrency(totalPending)}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <div className="flex items-center gap-1.5">
-                <Wallet className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs md:text-sm text-muted-foreground">Capital de Giro</span>
-              </div>
-              <span className="font-bold text-base md:text-lg">{formatCurrency(workingCapital)}</span>
-            </div>
-          </CardContent>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Capital de Giro</span>
+          </div>
+          <p className="text-lg font-bold tabular-nums">{formatCurrency(workingCapital)}</p>
+          <p className="text-[10px] text-muted-foreground">Ticket médio {formatCurrency(averagePerService)}</p>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-3">
+      {/* Financial Details + Top Clients + Cost Categories */}
+      <div className="grid gap-2 md:gap-3 grid-cols-1 md:grid-cols-3">
+        {/* Situação Financeira */}
         <Card>
-          <CardHeader className="flex flex-row items-center gap-3 pb-3">
-            <div className="rounded-lg bg-blue-500/10 p-2.5">
-              <Percent className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
+          <CardHeader className="p-3 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-emerald-500/10 p-1.5">
+                <FileText className="h-3.5 w-3.5 text-emerald-500" />
+              </div>
+              <CardTitle className="text-xs font-semibold">Situação Financeira</CardTitle>
             </div>
-            <CardTitle className="text-sm md:text-base">Análise de Custos</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2.5">
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-xs text-muted-foreground">Faturamento Total</span>
-              <span className="font-semibold text-sm">{formatCurrency(financials.totalValue)}</span>
+          <CardContent className="p-3 pt-0 space-y-1">
+            <div className="flex justify-between items-center py-1 border-b">
+              <span className="text-[10px] text-muted-foreground">Serviços</span>
+              <span className="text-xs font-bold">{services.length}</span>
             </div>
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-xs text-muted-foreground">Total Custos</span>
-              <span className="font-semibold text-sm text-destructive">{formatCurrency(financials.totalCosts)}</span>
+            <div className="flex justify-between items-center py-1 border-b">
+              <div className="flex items-center gap-1">
+                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                <span className="text-[10px] text-muted-foreground">Recebido</span>
+              </div>
+              <span className="text-xs font-bold text-emerald-600">{formatCurrency(totalReceived)}</span>
             </div>
-            <div className="flex justify-between items-center py-1.5 border-b">
-              <span className="text-xs text-muted-foreground">Saldo Líquido</span>
-              <span className="font-semibold text-sm text-emerald-500">{formatCurrency(financials.netBalance)}</span>
+            <div className="flex justify-between items-center py-1 border-b">
+              <div className="flex items-center gap-1">
+                <TrendingDown className="h-3 w-3 text-amber-500" />
+                <span className="text-[10px] text-muted-foreground">A Receber</span>
+              </div>
+              <span className="text-xs font-bold text-amber-500">{formatCurrency(totalPending)}</span>
             </div>
-            <div className="flex justify-between items-center py-1.5">
-              <span className="text-xs text-muted-foreground">Margem</span>
-              <span className="font-semibold text-sm">{financials.margin.toFixed(1)}%</span>
+            <div className="flex justify-between items-center py-1">
+              <span className="text-[10px] text-muted-foreground">Média/Serviço</span>
+              <span className="text-xs font-bold">{formatCurrency(averagePerService)}</span>
             </div>
           </CardContent>
         </Card>
 
+        {/* Top Clientes */}
         <Card>
-          <CardHeader className="flex flex-row items-center gap-3 pb-3">
-            <div className="rounded-lg bg-purple-500/10 p-2.5">
-              <Users className="h-4 w-4 md:h-5 md:w-5 text-purple-500" />
+          <CardHeader className="p-3 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-purple-500/10 p-1.5">
+                <Users className="h-3.5 w-3.5 text-purple-500" />
+              </div>
+              <CardTitle className="text-xs font-semibold">Top Clientes</CardTitle>
             </div>
-            <CardTitle className="text-sm md:text-base">Top Clientes</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="p-3 pt-0 space-y-1">
             {financials.topClients.length > 0 ? (
-              financials.topClients.map(([name, data], i) => (
-                <div key={i} className="flex justify-between items-center py-1.5 border-b last:border-0">
-                  <span className="text-xs text-muted-foreground truncate max-w-[120px] md:max-w-[150px]" title={name}>
-                    {name.length > 18 ? name.substring(0, 18) + '...' : name}
-                  </span>
+              financials.topClients.map(([name, data], i) => {
+                const clientMargin = data.value > 0 ? ((data.value - data.costs) / data.value * 100) : 0;
+                return (
+                  <div key={i} className="flex justify-between items-center py-1 border-b last:border-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[9px] font-bold text-muted-foreground w-3">{i + 1}.</span>
+                      <span className="text-[10px] truncate max-w-[100px]" title={name}>{name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold">{formatCurrency(data.value)}</span>
+                      <span className={cn(
+                        "text-[9px] font-medium px-1 rounded",
+                        clientMargin >= 30 ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"
+                      )}>
+                        {clientMargin.toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-[10px] text-muted-foreground py-2">Sem dados</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Custos por Categoria */}
+        <Card>
+          <CardHeader className="p-3 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-red-500/10 p-1.5">
+                <Percent className="h-3.5 w-3.5 text-red-500" />
+              </div>
+              <CardTitle className="text-xs font-semibold">Custos por Categoria</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 space-y-1">
+            {financials.expenseCategories.length > 0 ? (
+              <>
+                {financials.expenseCategories.map((item, i) => (
+                  <div key={i} className="py-1 border-b last:border-0">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-muted-foreground">{item.category}</span>
+                      <span className="text-[10px] font-bold text-red-600">{formatCurrency(item.value)}</span>
+                    </div>
+                    <div className="flex gap-2 mt-0.5">
+                      <div className="flex items-center gap-0.5">
+                        <div className="w-full bg-muted rounded-full h-1 flex-1 min-w-[40px]">
+                          <div
+                            className="bg-red-500 h-1 rounded-full"
+                            style={{ width: `${Math.min(item.percentOfCategory, 100)}%` }}
+                          />
+                        </div>
+                        <span className="text-[8px] text-muted-foreground whitespace-nowrap">
+                          {item.percentOfCategory.toFixed(1)}% cat.
+                        </span>
+                      </div>
+                      <span className="text-[8px] text-muted-foreground whitespace-nowrap">
+                        {item.percentOfTotal.toFixed(1)}% geral
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {/* Total da categoria */}
+                <div className="flex justify-between items-center pt-1 mt-1 border-t">
+                  <span className="text-[10px] font-semibold text-muted-foreground">Total Categorias</span>
                   <div className="text-right">
-                    <span className="text-xs font-semibold">{formatCurrency(data.value)}</span>
-                    <span className="text-[9px] text-muted-foreground ml-1">({data.count})</span>
+                    <span className="text-[10px] font-bold text-red-600">{formatCurrency(financials.totalCategoryExpenses)}</span>
+                    <span className="text-[8px] text-muted-foreground ml-1">
+                      ({totalValue > 0 ? ((financials.totalCategoryExpenses / totalValue) * 100).toFixed(1) : '0'}% geral)
+                    </span>
                   </div>
                 </div>
-              ))
+              </>
             ) : (
-              <p className="text-xs text-muted-foreground">Sem dados</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-3 pb-3">
-            <div className="rounded-lg bg-destructive/10 p-2.5">
-              <TrendingDown className="h-4 w-4 md:h-5 md:w-5 text-destructive" />
-            </div>
-            <CardTitle className="text-sm md:text-base">Custos por Categoria</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {financials.expenseCategories.length > 0 ? (
-              financials.expenseCategories.map(([cat, val], i) => (
-                <div key={i} className="flex justify-between items-center py-1.5 border-b last:border-0">
-                  <span className="text-xs text-muted-foreground">{cat}</span>
-                  <span className="text-xs font-semibold text-destructive">{formatCurrency(val)}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-muted-foreground">Sem custos detalhados</p>
+              <p className="text-[10px] text-muted-foreground py-2">Sem custos detalhados</p>
             )}
           </CardContent>
         </Card>
       </div>
 
+      {/* Status Grid */}
       {Object.keys(servicesByStatus).length > 0 && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm md:text-base">Serviços por Status</CardTitle>
+          <CardHeader className="p-3 pb-2">
+            <CardTitle className="text-xs font-semibold">Serviços por Status</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <CardContent className="p-3 pt-0">
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
               {Object.entries(servicesByStatus).map(([status, count]) => (
-                <div
-                  key={status}
-                  className="rounded-lg border p-3 md:p-4 text-center transition-colors hover:bg-muted/50"
-                >
-                  <p className="text-xl md:text-2xl font-bold">{count as number}</p>
-                  <p className="text-[10px] md:text-sm text-muted-foreground">{getStatusLabel(status)}</p>
+                <div key={status} className="rounded-lg border p-2 text-center hover:bg-muted/50 transition-colors">
+                  <p className="text-lg font-bold">{count as number}</p>
+                  <p className="text-[9px] text-muted-foreground">{getStatusLabel(status)}</p>
                 </div>
               ))}
             </div>
