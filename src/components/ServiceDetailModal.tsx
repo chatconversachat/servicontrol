@@ -72,7 +72,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl bg-background border shadow-2xl p-0 overflow-hidden max-h-[98vh]">
+            <DialogContent className="max-w-6xl bg-background border shadow-2xl p-0 overflow-y-auto max-h-[95vh]">
                 {/* Compact Header */}
                 <div className="bg-primary px-4 py-3 text-primary-foreground">
                     <DialogHeader>
