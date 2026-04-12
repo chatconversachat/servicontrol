@@ -69,28 +69,28 @@ export default function ReceiptsPage() {
     );
   }
 
-  // Calculate total cards across all lists
   const totalCards = listsWithCards.reduce((sum, lc) => sum + lc.cards.length, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <PageHeader
         title="Recebimentos"
         description="Controle de pagamentos recebidos"
         actions={
-          <>
+          <div className="flex gap-2 flex-wrap">
             {hasTrelloConfig && (
-              <Button variant="outline" onClick={refetchTrello} className="gap-2">
-                <RefreshCw className="h-4 w-4" />
-                Sincronizar
+              <Button variant="outline" size="sm" onClick={refetchTrello} className="gap-1.5 text-xs md:text-sm">
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Sincronizar</span>
+                <span className="sm:hidden">Sync</span>
               </Button>
             )}
-            <Button variant="outline" onClick={handleExport} className="gap-2">
-              <Download className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5 text-xs md:text-sm">
+              <Download className="h-3.5 w-3.5" />
               Exportar
             </Button>
             <ReceiptFormDialog services={services as Service[]} onSubmit={handleAddReceipt} />
-          </>
+          </div>
         }
       />
 
@@ -98,26 +98,28 @@ export default function ReceiptsPage() {
 
       {hasTrelloConfig && listsWithCards.length > 0 ? (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
             <LayoutList className="h-4 w-4" />
             <span>Gestão Financeira — {listsWithCards.length} listas, {totalCards} cartões</span>
           </div>
 
           <Tabs defaultValue={listsWithCards[0]?.list.id} className="w-full">
-            <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
-              {listsWithCards.map(({ list, cards }) => (
-                <TabsTrigger
-                  key={list.id}
-                  value={list.id}
-                  className="flex items-center gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                >
-                  {list.name}
-                  <Badge variant="secondary" className="h-5 min-w-[20px] text-[10px] px-1.5">
-                    {cards.length}
-                  </Badge>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+              <TabsList className="inline-flex w-auto h-auto gap-1 bg-muted/50 p-1">
+                {listsWithCards.map(({ list, cards }) => (
+                  <TabsTrigger
+                    key={list.id}
+                    value={list.id}
+                    className="flex items-center gap-1 text-[11px] md:text-xs px-2.5 py-1.5 whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    {list.name}
+                    <Badge variant="secondary" className="h-4 min-w-[16px] text-[9px] px-1">
+                      {cards.length}
+                    </Badge>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
 
             {listsWithCards.map(({ list, cards }) => {
               const total = cards.reduce((sum, card) => {
@@ -129,11 +131,11 @@ export default function ReceiptsPage() {
 
               return (
                 <TabsContent key={list.id} value={list.id} className="mt-4 space-y-4">
-                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3">
-                    <span className="text-sm text-muted-foreground font-medium">
-                      Total da lista ({cards.length} cartões)
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 md:px-4 py-2.5 md:py-3">
+                    <span className="text-xs md:text-sm text-muted-foreground font-medium">
+                      Total ({cards.length} cartões)
                     </span>
-                    <span className="text-lg font-bold text-primary">
+                    <span className="text-base md:text-lg font-bold text-primary">
                       R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -144,20 +146,23 @@ export default function ReceiptsPage() {
           </Tabs>
         </div>
       ) : hasTrelloConfig && trelloError ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-          <p className="text-sm text-destructive">{trelloError}</p>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 md:p-6 text-center">
+          <p className="text-xs md:text-sm text-destructive">{trelloError}</p>
           <Button variant="outline" size="sm" className="mt-3" onClick={refetchTrello}>
             Tentar novamente
           </Button>
         </div>
       ) : null}
 
-      {/* Local receipts table always visible below */}
-      <ReceiptsTable
-        receipts={receipts as Receipt[]}
-        services={services as Service[]}
-        onDelete={handleDelete}
-      />
+      <div className="overflow-x-auto -mx-4 md:mx-0">
+        <div className="min-w-[500px] md:min-w-0 px-4 md:px-0">
+          <ReceiptsTable
+            receipts={receipts as Receipt[]}
+            services={services as Service[]}
+            onDelete={handleDelete}
+          />
+        </div>
+      </div>
     </div>
   );
 }
