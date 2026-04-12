@@ -121,15 +121,23 @@ export default function SettingsPage() {
                                     onCheckedChange={handleTogglePush}
                                 />
                             </div>
-                            <div className="flex items-center justify-between rounded-lg border p-4 opacity-60">
+                            <div className="flex items-center justify-between rounded-lg border p-4">
                                 <div className="flex items-center gap-3">
                                     <MessageSquare className="h-5 w-5 text-primary" />
                                     <div>
-                                        <p className="text-sm font-medium">WhatsApp</p>
-                                        <p className="text-xs text-muted-foreground">Em breve — conecte o Twilio nas configurações</p>
+                                        <p className="text-sm font-medium">WhatsApp (Evolution API)</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {getEvolutionSettings().connected
+                                                ? 'Conectado — notificações ativas'
+                                                : 'Configure abaixo na seção Evolution API'}
+                                        </p>
                                     </div>
                                 </div>
-                                <Switch disabled checked={preferences.whatsappEnabled} />
+                                <Switch
+                                    disabled={!getEvolutionSettings().connected}
+                                    checked={preferences.whatsappEnabled}
+                                    onCheckedChange={(v) => savePreferences({ whatsappEnabled: v })}
+                                />
                             </div>
                         </div>
 
@@ -153,6 +161,9 @@ export default function SettingsPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Evolution API / WhatsApp Card */}
+                <EvolutionApiSettings />
 
                 {/* Trello Card */}
                 <Card>
