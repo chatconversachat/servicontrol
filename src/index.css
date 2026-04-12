@@ -135,4 +135,17 @@
   .status-overdue {
     @apply bg-destructive/10 text-destructive border-destructive/20;
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Hide scrollbar for mobile horizontal scroll */
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
