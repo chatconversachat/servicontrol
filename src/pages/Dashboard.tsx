@@ -92,11 +92,23 @@ export default function Dashboard() {
   const monthlyData = useMemo(() => {
     const monthMap: Record<string, { received: number; pending: number; costs: number; count: number }> = {};
     services.forEach(s => {
-      const dateStr = s.expectedDate || s.createdAt;
-      if (!dateStr) return;
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return;
-      const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
+      let month: number;
+      let year: number;
+
+      // Use listMonthIndex/listYear for Trello month-list cards
+      if (s.listMonthIndex !== undefined && s.listMonthIndex >= 0 && s.listYear) {
+        month = s.listMonthIndex;
+        year = s.listYear;
+      } else {
+        const dateStr = s.expectedDate || s.createdAt;
+        if (!dateStr) return;
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return;
+        month = date.getMonth();
+        year = date.getFullYear();
+      }
+
+      const key = `${year}-${String(month).padStart(2, '0')}`;
       if (!monthMap[key]) monthMap[key] = { received: 0, pending: 0, costs: 0, count: 0 };
       monthMap[key].count++;
       if (s.status === 'paid') monthMap[key].received += s.value;
