@@ -49,20 +49,6 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <PageHeader
-        title="Serviços"
-        actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleExport(monthlyServices)} className="gap-1.5 text-xs md:text-sm">
-              <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Exportar Mês</span>
-              <span className="sm:hidden">Exportar</span>
-            </Button>
-            <ServiceFormDialog onSubmit={handleAddService} />
-          </div>
-        }
-      />
-
       <Tabs defaultValue="monthly" className="w-full space-y-4 md:space-y-6">
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
           <TabsList className="inline-flex w-auto md:grid md:grid-cols-4 md:w-full h-auto p-1 bg-muted/50 backdrop-blur-sm border shadow-sm rounded-xl gap-1">
@@ -88,6 +74,20 @@ export default function ServicesPage() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <PageHeader
+          title="Serviços"
+          actions={
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => handleExport(monthlyServices)} className="gap-1.5 text-xs md:text-sm">
+                <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Exportar Mês</span>
+                <span className="sm:hidden">Exportar</span>
+              </Button>
+              <ServiceFormDialog onSubmit={handleAddService} />
+            </div>
+          }
+        />
 
         <TabsContent value="monthly" className="space-y-4 md:space-y-6">
           <SmartFilters />
