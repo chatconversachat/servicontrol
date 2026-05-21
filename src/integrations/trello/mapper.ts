@@ -107,11 +107,11 @@ export const mapTrelloCardToService = (
 
     if (listNameLower.includes('andamento')) {
         status = 'in_progress';
-    } else if (listNameLower.includes('pagamento')) {
+    } else if (listNameLower.includes('pagamento') || listNameLower.includes('concluido') || listNameLower.includes('concluído')) {
         status = 'completed';
-    } else if (listNameLower.includes('acerto')) {
+    } else if (listNameLower.includes('acerto') || listNameLower.includes('conferir')) {
         status = 'overdue';
-    } else if (listNameLower.includes('pago') || listNameLower.includes('concluído')) {
+    } else if (listNameLower.includes('pago') || listNameLower.includes('finalizado') || listNameLower.includes('recebido')) {
         status = 'paid';
     } else if (isMonthList) {
         status = 'pending';
