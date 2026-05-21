@@ -75,7 +75,7 @@ export function useServices() {
   const { boardIds: trelloBoardIds } = getTrelloSettings();
   const useTrello = trelloBoardIds && trelloBoardIds.length > 0;
 
-  const fetchServices = useCallback(async () => {
+  const fetchServices = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
 
     if (useTrello) {
@@ -86,11 +86,12 @@ export function useServices() {
           trelloBoardIds.map(async (boardId) => {
             try {
               const [cards, lists] = await Promise.all([
-                trelloClient.getCards(boardId),
-                trelloClient.getLists(boardId)
+                trelloClient.getCards(boardId, signal),
+                trelloClient.getLists(boardId, signal)
               ]);
               return cards.map(card => mapTrelloCardToService(card, lists));
-            } catch (e) {
+            } catch (e: any) {
+              if (e.name === 'AbortError') throw e;
               console.error(`Error fetching board ${boardId}:`, e);
               return [];
             }
@@ -100,6 +101,7 @@ export function useServices() {
         const allFetched = allServicesArrays.flat();
         setAllServices(allFetched);
       } catch (err: any) {
+        if (err.name === 'AbortError') return;
         console.error('Error fetching Trello services:', err);
         toast.error('Erro ao carregar dados do Trello. Verifique suas configurações.');
       } finally {
@@ -129,7 +131,9 @@ export function useServices() {
   }, [user, trelloBoardIds.join(','), useTrello]);
 
   useEffect(() => {
-    fetchServices();
+    const controller = new AbortController();
+    fetchServices(controller.signal);
+    return () => controller.abort();
   }, [fetchServices]);
 
   useEffect(() => {

@@ -12,32 +12,42 @@ export class TrelloClient {
         this.token = token;
     }
 
-    private async fetch<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+    private async fetch<T>(path: string, params: Record<string, string> = {}, signal?: AbortSignal): Promise<T> {
         const queryParams = new URLSearchParams({
             key: this.apiKey,
             token: this.token,
             ...params,
         });
 
-        const response = await fetch(`${BASE_URL}${path}?${queryParams}`);
+        try {
+            const response = await fetch(`${BASE_URL}${path}?${queryParams}`, { signal });
 
-        if (!response.ok) {
-            throw new Error(`Trello API Error: ${response.statusText}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Trello API Error: ${response.statusText} (${response.status})`);
+            }
+
+            return response.json();
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                console.log('Fetch aborted');
+                throw error;
+            }
+            console.error(`Trello API Fetch Error [${path}]:`, error);
+            throw error;
         }
-
-        return response.json();
     }
 
-    async getBoards(): Promise<TrelloBoard[]> {
-        return this.fetch<TrelloBoard[]>('/members/me/boards');
+    async getBoards(signal?: AbortSignal): Promise<TrelloBoard[]> {
+        return this.fetch<TrelloBoard[]>('/members/me/boards', {}, signal);
     }
 
-    async getLists(boardId: string): Promise<TrelloList[]> {
-        return this.fetch<TrelloList[]>(`/boards/${boardId}/lists`);
+    async getLists(boardId: string, signal?: AbortSignal): Promise<TrelloList[]> {
+        return this.fetch<TrelloList[]>(`/boards/${boardId}/lists`, {}, signal);
     }
 
-    async getCards(boardId: string): Promise<TrelloCard[]> {
-        return this.fetch<TrelloCard[]>(`/boards/${boardId}/cards`);
+    async getCards(boardId: string, signal?: AbortSignal): Promise<TrelloCard[]> {
+        return this.fetch<TrelloCard[]>(`/boards/${boardId}/cards`, {}, signal);
     }
 }
 
